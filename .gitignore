@@ -1,0 +1,17 @@
+﻿# Virtual environment - large, machine-specific, never share
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment variables / secrets (for future phases)
+.env
+
+# VS Code settings (optional, personal preference)
+.vscode/
+
+# Evidence working files (synthetic test data is fine to share,
+# but keep this here as a safeguard for later real testing)
+evidence/working/*
+!evidence/working/.gitkeep
