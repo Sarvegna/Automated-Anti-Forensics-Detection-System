@@ -1,4 +1,4 @@
-from datetime import timedelta
+from core.gap_detection import find_timeline_gaps
 
 # Event IDs we care about, with human-readable meaning
 LOG_CLEARED_EVENT_ID = 1102
@@ -12,20 +12,9 @@ GAP_THRESHOLD_MINUTES = 30
 def analyze_event_log(events):
     """
     Analyzes a list of event dictionaries for anti-forensic indicators.
-
-    Each event dictionary must have:
-        - event_id (int)
-        - timestamp (datetime)
-        - source (str)
-        - message (str)
-
-    Returns a dictionary with:
-        - indicators: list of specific findings
-        - anomaly_detected: True/False
     """
     indicators = []
 
-    # Sort events chronologically, just in case they weren't already
     sorted_events = sorted(events, key=lambda e: e["timestamp"])
 
     # Check 1: Look for log-cleared or audit-policy-changed events
@@ -53,25 +42,13 @@ def analyze_event_log(events):
                 )
             })
 
-    # Check 2: Look for suspicious time gaps between consecutive events
-    for i in range(len(sorted_events) - 1):
-        current_event = sorted_events[i]
-        next_event = sorted_events[i + 1]
-
-        gap = next_event["timestamp"] - current_event["timestamp"]
-
-        if gap > timedelta(minutes=GAP_THRESHOLD_MINUTES):
-            indicators.append({
-                "type": "Timeline Gap",
-                "gap_minutes": gap.total_seconds() / 60,
-                "between": (current_event["timestamp"], next_event["timestamp"]),
-                "explanation": (
-                    f"Potential anti-forensic indicator: a gap of "
-                    f"{gap.total_seconds() / 60:.1f} minutes was found "
-                    f"between consecutive log entries. This may indicate "
-                    f"missing or deleted events. Requires investigator review."
-                )
-            })
+    # Check 2: Use our SHARED gap-detection function
+    gap_indicators = find_timeline_gaps(
+        sorted_events,
+        threshold_minutes=GAP_THRESHOLD_MINUTES,
+        timestamp_key="timestamp"
+    )
+    indicators.extend(gap_indicators)
 
     return {
         "indicators": indicators,
