@@ -3,15 +3,16 @@ INDICATOR_WEIGHTS = {
     "Log Cleared": 25,
     "Audit Policy Changed": 20,
     "Timeline Gap": 15,
+    "Hidden File": 10,
 }
 
 MAX_SCORE = 100
 
 
-def calculate_risk_score(timestamp_result=None, eventlog_result=None, browser_result=None):
+def calculate_risk_score(timestamp_result=None, eventlog_result=None, browser_result=None, hidden_file_result=None):
     """
-    Combines findings from timestamp, event log, and browser analysis
-    into a single explainable risk score.
+    Combines findings from timestamp, event log, browser, and hidden
+    file analysis into a single explainable risk score.
     """
     contributing_indicators = []
     total_score = 0
@@ -46,6 +47,15 @@ def calculate_risk_score(timestamp_result=None, eventlog_result=None, browser_re
                 "points": points,
                 "explanation": indicator.get("explanation")
             })
+
+    if hidden_file_result and hidden_file_result.get("anomaly_detected"):
+        points = INDICATOR_WEIGHTS["Hidden File"]
+        total_score += points
+        contributing_indicators.append({
+            "type": "Hidden File",
+            "points": points,
+            "explanation": hidden_file_result.get("explanation")
+        })
 
     total_score = min(total_score, MAX_SCORE)
 
