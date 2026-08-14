@@ -1,5 +1,8 @@
 INDICATOR_WEIGHTS = {
-    "Timestamp Anomaly": 20,
+    "Modified Before Created": 20,
+    "Accessed Before Created": 20,
+    "Future Timestamp": 25,
+    "Accessed Before Modified": 10,
     "Log Cleared": 25,
     "Audit Policy Changed": 20,
     "Timeline Gap": 15,
@@ -17,14 +20,17 @@ def calculate_risk_score(timestamp_result=None, eventlog_result=None, browser_re
     contributing_indicators = []
     total_score = 0
 
+    # Timestamp analysis now returns MULTIPLE indicators (like eventlog/browser)
     if timestamp_result and timestamp_result.get("anomaly_detected"):
-        points = INDICATOR_WEIGHTS["Timestamp Anomaly"]
-        total_score += points
-        contributing_indicators.append({
-            "type": "Timestamp Anomaly",
-            "points": points,
-            "explanation": timestamp_result.get("explanation")
-        })
+        for indicator in timestamp_result["indicators"]:
+            indicator_type = indicator["type"]
+            points = INDICATOR_WEIGHTS.get(indicator_type, 0)
+            total_score += points
+            contributing_indicators.append({
+                "type": f"{indicator_type} (Timestamp)",
+                "points": points,
+                "explanation": indicator.get("explanation")
+            })
 
     if eventlog_result and eventlog_result.get("anomaly_detected"):
         for indicator in eventlog_result["indicators"]:

@@ -11,17 +11,17 @@ from core.eventlog_analysis import analyze_event_log
 from core.browser_analysis import analyze_browser_history
 
 # Test Case 1: Clean evidence - no anomalies anywhere
-clean_timestamp_result = {"anomaly_detected": False, "explanation": "No timestamp inconsistency detected."}
+clean_timestamp_result = {"anomaly_detected": False, "indicators": []}
 clean_eventlog_result = {"anomaly_detected": False, "indicators": []}
 clean_browser_result = {"anomaly_detected": False, "indicators": []}
 
 result = calculate_risk_score(clean_timestamp_result, clean_eventlog_result, clean_browser_result)
-print("Test 1 - Clean evidence (all 3 modules):")
+print("Test 1 - Clean evidence (all modules):")
 print("  Score:", result["score"])
 print("  Risk Level:", result["risk_level"])
 print()
 
-# Test Case 2: Suspicious evidence across ALL THREE modules
+# Test Case 2: Use our REAL anomaly_test.txt file (Modified<Created)
 anomaly_file = os.path.join(project_root, "evidence", "input", "anomaly_test.txt")
 timestamp_result = analyze_timestamps(anomaly_file)
 
@@ -41,7 +41,7 @@ suspicious_visits = [
 browser_result = analyze_browser_history(suspicious_visits)
 
 result = calculate_risk_score(timestamp_result, eventlog_result, browser_result)
-print("Test 2 - Suspicious evidence (all 3 modules triggered):")
+print("Test 2 - Suspicious evidence (all modules triggered):")
 print("  Score:", result["score"])
 print("  Risk Level:", result["risk_level"])
 print("  Contributing indicators:")
