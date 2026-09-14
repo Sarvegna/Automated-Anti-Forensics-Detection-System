@@ -17,6 +17,10 @@ print()
 
 # Test Case 2: Create a file, then set its Hidden attribute using Windows' attrib command
 hidden_file = os.path.join(project_root, "evidence", "input", "hidden_test.txt")
+if os.path.exists(hidden_file):
+    subprocess.run(["attrib", "-H", hidden_file], check=False)
+    os.remove(hidden_file)
+
 with open(hidden_file, "w") as f:
     f.write("Synthetic file for hidden-attribute testing.")
 

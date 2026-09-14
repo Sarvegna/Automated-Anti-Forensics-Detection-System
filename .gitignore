@@ -1,5 +1,6 @@
 ﻿# Virtual environment - large, machine-specific, never share
 venv/
+.venv/
 
 # Python cache files
 __pycache__/
@@ -15,3 +16,4 @@ __pycache__/
 # but keep this here as a safeguard for later real testing)
 evidence/working/*
 !evidence/working/.gitkeep
+data/*.json

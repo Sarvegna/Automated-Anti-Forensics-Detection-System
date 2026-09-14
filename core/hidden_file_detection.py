@@ -2,9 +2,10 @@ import os
 import stat
 
 
-def check_hidden_file(file_path):
+def check_hidden_file(evidence_input):
     """
     Checks whether a file has the Windows "Hidden" attribute set.
+    Accepts either an EvidenceObject or a direct file path string.
 
     Returns a dictionary with:
         - is_hidden: True/False
@@ -12,6 +13,11 @@ def check_hidden_file(file_path):
           consistency with our other analysis modules)
         - explanation: description of the finding
     """
+    if hasattr(evidence_input, "path"):
+        file_path = evidence_input.path
+    else:
+        file_path = str(evidence_input)
+
     file_stat = os.stat(file_path)
 
     # On Windows, st_file_attributes contains attribute flags.
