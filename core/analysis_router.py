@@ -146,8 +146,8 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
     yara_result = analyze_with_yara(file_path, evidence_reference=evidence_reference)
     module_statuses["YARA Analysis"] = yara_result.get("status", "FAILED")
     module_results["YARA Analysis"] = yara_result
-    if yara_result.get("findings"):
-        all_findings.extend(yara_result["findings"])
+    # YARA findings are sourced exclusively from risk_findings (build_findings_from_risk_result)
+    # to avoid duplicates caused by the '(YARA)' suffix added by risk_scoring.
 
     # --- Module 4: Windows Event Log Analysis ---
     eventlog_result = None
@@ -197,8 +197,10 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
         if browser_db_result.get("evidence_type") in {"Browser Database (Chromium)", "SQLite Database (Non-Browser)", "Corrupted SQLite Database"}:
             identification["evidence_type"] = browser_db_result["evidence_type"]
 
-        if browser_db_result.get("findings"):
-            all_findings.extend(browser_db_result["findings"])
+        # Browser findings are sourced exclusively from risk_findings to ensure
+        # the scored points (15 pts per Timeline Gap) survive into all_findings.
+        # Injecting direct findings here produced +0 pts entries that won the
+        # deduplication check and displaced the scored risk finding.
 
         print(f"[DEBUG] browser_db_result: {browser_db_result}")
         print(f"[DEBUG] browser_db_result['status']: {browser_db_result.get('status')}")
@@ -235,8 +237,8 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
         ntfs_result = analyze_ntfs_image(evidence_obj, evidence_reference=evidence_reference)
         module_statuses["NTFS Artifact Analysis"] = ntfs_result.get("status", "FAILED")
         module_results["NTFS Artifact Analysis"] = ntfs_result
-        if ntfs_result.get("findings"):
-            all_findings.extend(ntfs_result["findings"])
+        # NTFS findings are sourced exclusively from risk_findings (with '(NTFS)'
+        # suffix) to avoid duplicating each discrepancy with mismatched type strings.
     else:
         module_statuses["NTFS Artifact Analysis"] = "NOT_APPLICABLE"
 

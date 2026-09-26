@@ -875,7 +875,8 @@ elif selected_page == "Module Results":
             "YARA Analysis",
             "Browser Artifact Analysis",
             "Event Log Analysis",
-            "Memory Analysis (Volatility 3)"
+            "Memory Analysis (Volatility 3)",
+            "NTFS Artifact Analysis"
         ]
 
         active_mod = st.session_state.selected_module or all_modules[0]
@@ -1158,6 +1159,59 @@ elif selected_page == "Module Results":
             **Analysis Scope:** Evaluates RAM memory captures using Volatility 3 framework for injected code and unlinked processes.
             """)
             st.info(f"Memory Analysis Status: {m_status}. {m_data.get('notes', m_data.get('error', 'N/A'))}")
+
+        elif mod_tab_choice == "NTFS Artifact Analysis":
+            st.markdown("""
+            **Analysis Scope:** Parses the NTFS Master File Table (MFT) in read-only mode and compares
+            `$STANDARD_INFORMATION` vs `$FILE_NAME` timestamps per file to detect timestomping discrepancies.
+            """)
+            if m_status == "NOT_APPLICABLE":
+                st.info("\u2139\ufe0f NTFS Artifact Analysis was not applicable to this evidence file "
+                        "(evidence must be an NTFS disk/forensic image).")
+            elif m_status == "FAILED":
+                st.error(f"\u274c NTFS Analysis failed: {m_data.get('error_message', m_data.get('error', 'Unknown error'))}")
+            elif m_data:
+                discrepancies = m_data.get("discrepancies", [])
+                records_scanned = m_data.get("records_scanned", 0)
+                col_n1, col_n2 = st.columns(2)
+                with col_n1:
+                    st.metric("MFT Records Scanned", records_scanned)
+                with col_n2:
+                    ntfs_pts = INDICATOR_WEIGHTS.get("NTFS Timestamp Discrepancy", 25)
+                    st.metric("NTFS Risk Contribution", f"+{ntfs_pts * len(discrepancies)} pts" if discrepancies else "0 pts")
+
+                if discrepancies:
+                    st.markdown('<div class="section-heading" style="font-size:18px; margin-top:16px;">'
+                                'Detected NTFS Timestamp Discrepancies</div>', unsafe_allow_html=True)
+                    for disc in discrepancies:
+                        rel_path = disc.get("relative_path", "Unknown file")
+                        diffs = disc.get("diffs", [])
+                        diff_lines = "; ".join(
+                            f"{d['field']}: SI={d['si_dt'].strftime('%Y-%m-%d %H:%M:%S UTC') if hasattr(d.get('si_dt', ''), 'strftime') else d.get('si_dt', 'N/A')} "
+                            f"vs FN={d['fn_dt'].strftime('%Y-%m-%d %H:%M:%S UTC') if hasattr(d.get('fn_dt', ''), 'strftime') else d.get('fn_dt', 'N/A')} "
+                            f"(diff: {d.get('diff_sec', 0):.2f}s)"
+                            for d in diffs
+                        )
+                        st.markdown(f"""
+                        <div class="dark-panel" style="border-left: 4px solid #ef4444; margin-top: 14px; margin-bottom: 14px;">
+                            <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">NTFS FINDING</div>
+                            <div style="font-size: 17px; color: #ffffff; font-weight: 700; margin-bottom: 8px;">{rel_path}</div>
+                            <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 8px;">TIMESTAMP ATTRIBUTE DISCREPANCIES</div>
+                            <div style="font-size: 14px; color: #f1f5f9; font-family: monospace; margin-bottom: 10px;">{diff_lines or "No details available."}</div>
+                            <div style="display: flex; gap: 24px; align-items: center;">
+                                <div>
+                                    <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">SEVERITY:</span>
+                                    <span class="badge badge-high" style="margin-left: 6px;">HIGH</span>
+                                </div>
+                                <div>
+                                    <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">POINTS:</span>
+                                    <span class="tech-mono" style="color: #60a5fa; font-weight: 700; margin-left: 6px;">{ntfs_pts}</span>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.success("\u2705 No NTFS timestamp attribute discrepancies detected.")
 
 
 # -----------------------------------------------------------------------------
