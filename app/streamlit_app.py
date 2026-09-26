@@ -949,14 +949,23 @@ elif selected_page == "Module Results":
             **Analysis Scope:** Scans evidence byte streams against compiled anti-forensic YARA rules (detecting log cleaners, timestompers, and wipers).
             """)
             if m_data:
-                matches = m_data.get("matches", [])
-                st.metric("YARA Rules Matched", len(matches))
-                if matches:
-                    for match in matches:
-                        rule_name = match.get("rule", match.get("rule_name", "YARA Rule Match"))
-                        exp = match.get("explanation", match.get("description", "Anti-forensic signature detected."))
+                # yara_analysis returns matches under data["matched_rules"]
+                yara_data = m_data.get("data", {})
+                matched_rules = yara_data.get("matched_rules", [])
+                yara_findings = m_data.get("findings", [])
+                st.metric("YARA Rules Matched", len(matched_rules))
+                if matched_rules:
+                    for match in matched_rules:
+                        rule_name = match.get("rule", "YARA Rule Match")
+                        meta = match.get("meta", {})
+                        exp = meta.get("description", "Anti-forensic signature detected.")
+                        severity_val = meta.get("severity", "HIGH")
+                        badge_cls = "badge-high" if severity_val == "HIGH" else ("badge-medium" if severity_val == "MEDIUM" else "badge-low")
+                        border_color = "#ef4444" if severity_val == "HIGH" else ("#eab308" if severity_val == "MEDIUM" else "#22c55e")
+                        from core.risk_scoring import INDICATOR_WEIGHTS
+                        pts = INDICATOR_WEIGHTS.get(f"YARA Match ({rule_name})", INDICATOR_WEIGHTS.get("YARA Match", 25))
                         st.markdown(f"""
-                        <div class="dark-panel" style="border-left: 4px solid #ef4444; margin-top: 15px; margin-bottom: 15px;">
+                        <div class="dark-panel" style="border-left: 4px solid {border_color}; margin-top: 15px; margin-bottom: 15px;">
                             <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">FINDING</div>
                             <div style="font-size: 18px; color: #ffffff; font-weight: 700; margin-bottom: 8px;">YARA Match: {rule_name}</div>
                             <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 10px;">EXPLANATION</div>
@@ -964,17 +973,24 @@ elif selected_page == "Module Results":
                             <div style="display: flex; gap: 24px; align-items: center;">
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">SEVERITY:</span>
-                                    <span class="badge badge-high" style="margin-left: 6px;">HIGH</span>
+                                    <span class="badge {badge_cls}" style="margin-left: 6px;">{severity_val}</span>
                                 </div>
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">POINTS:</span>
-                                    <span class="tech-mono" style="color: #60a5fa; font-weight: 700; margin-left: 6px;">25</span>
+                                    <span class="tech-mono" style="color: #60a5fa; font-weight: 700; margin-left: 6px;">{pts}</span>
                                 </div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
                 else:
-                    st.success("✅ No anti-forensic YARA rule signatures matched.")
+                    yara_status = m_data.get("status", "")
+                    if yara_status in ("MISSING_DEPENDENCY", "FAILED"):
+                        errors = m_data.get("errors", [])
+                        warnings = m_data.get("warnings", [])
+                        gap_detail = (errors + warnings)[0] if (errors or warnings) else "YARA analysis could not be completed."
+                        st.warning(f"⚠️ YARA Analysis Gap ({yara_status}): {gap_detail}")
+                    else:
+                        st.success("✅ No anti-forensic YARA rule signatures matched.")
 
         elif mod_tab_choice == "Browser Artifact Analysis":
             st.markdown("""
@@ -1354,6 +1370,26 @@ elif selected_page == "Help":
     1. **Investigator Information**: Enter investigator identity to unlock evidence controls.
     2. **Evidence Identification**: Cryptographic hashing (SHA-256) and artifact type matching.
     3. **Automated Pipeline**: Route to Timestamp, Hidden File, YARA, Browser, Event Log, and Memory analysis.
-    4. **Risk Scoring**: Risk points aggregated into LOW (0-29), MEDIUM (30-59), and HIGH (60-100) levels.
+    4. **Risk Scoring**: Risk points aggregated per distinct indicator category. Severity levels: **LOW** (0–29), **MEDIUM** (30–59), **HIGH** (60–100).
     5. **Report Generation**: Export standalone HTML and JSON forensic examination reports.
+
+    ### Risk Score Indicator Weights
+    | Indicator | Points |
+    |---|---|
+    | Future Timestamp | 25 |
+    | Log Cleared (Event ID 1102) | 25 |
+    | NTFS Timestamp Discrepancy | 25 |
+    | YARA Match (per matched rule) | 25 |
+    | Modified Before Created | 20 |
+    | Accessed Before Created | 20 |
+    | Audit Policy Changed (Event ID 4719) | 20 |
+    | Event Log Service Shutdown (Event ID 1100) | 20 |
+    | Timeline Gap (>30 min) | 15 |
+    | Hidden File Attribute | 10 |
+    | Accessed Before Modified | 10 |
+
+    > Each distinct indicator category contributes its base weight **once**, regardless of how many times it was observed. All occurrences are preserved for investigator review.
+
+    ### YARA Analysis
+    YARA cross-artifact scanning requires the `yara-python` native library. When the library is unavailable (`MISSING_DEPENDENCY`) or scanning fails (`FAILED`), the result is recorded as an **analysis gap** with 0 points and noted in the report for investigator awareness.
     """)

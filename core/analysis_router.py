@@ -254,7 +254,8 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
         eventlog_result=eventlog_result,
         browser_result=browser_scoring_result,
         hidden_file_result=hidden_file_result,
-        ntfs_result=ntfs_result
+        ntfs_result=ntfs_result,
+        yara_result=yara_result,
     )
 
     # Generate structured findings from risk scoring result
