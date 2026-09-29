@@ -17,7 +17,7 @@ def convert_webkit_timestamp(webkit_time):
         return None
     try:
         return CHROMIUM_EPOCH + timedelta(microseconds=webkit_time)
-    except Exception:
+    except (OverflowError, OSError, ValueError, TypeError):
         return None
 
 
@@ -29,7 +29,7 @@ def is_sqlite_file(file_path):
         with open(file_path, "rb") as f:
             header = f.read(16)
             return header == SQLITE_HEADER
-    except Exception:
+    except (OSError, IOError):
         return False
 
 

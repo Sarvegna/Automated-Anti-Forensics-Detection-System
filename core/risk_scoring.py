@@ -32,6 +32,58 @@ def _yara_weight_for_rule(rule_name):
     return INDICATOR_WEIGHTS.get("YARA Match", 25)
 
 
+def _score_indicator_group(indicators, module_suffix):
+    """
+    Groups a list of indicator dicts by distinct ``type`` value, looks up the
+    configured weight for each type, and returns a tuple:
+
+        (total_points, contributing_entries)
+
+    where ``contributing_entries`` is a list of dicts in the same format as
+    ``calculate_risk_score``'s ``contributing_indicators`` list.
+
+    Parameters
+    ----------
+    indicators : list[dict]
+        Raw indicator dicts, each expected to have at least a ``"type"`` key
+        and an ``"explanation"`` key.
+    module_suffix : str
+        Label appended to each contributing indicator's ``"type"`` field,
+        e.g. ``"(Timestamp)"`` or ``"(Event Log)"``.
+
+    Notes
+    -----
+    - Unknown indicator types receive 0 points (no score inflation).
+    - Repeated occurrences of the same type are grouped; only the first
+      occurrence's explanation is used, with an occurrence count appended
+      when more than one occurrence exists.
+    - Original indicator ordering within each group is preserved.
+    """
+    distinct_types = {}
+    for ind in indicators:
+        itype = ind.get("type")
+        if itype not in distinct_types:
+            distinct_types[itype] = []
+        distinct_types[itype].append(ind)
+
+    total_points = 0
+    entries = []
+    for itype, occ_list in distinct_types.items():
+        points = INDICATOR_WEIGHTS.get(itype, 0)
+        total_points += points
+        exp = occ_list[0].get("explanation", "")
+        if len(occ_list) > 1:
+            exp = f"{exp} ({len(occ_list)} occurrences detected)"
+        entries.append({
+            "type": f"{itype} {module_suffix}",
+            "points": points,
+            "base_weight": points,
+            "occurrences": len(occ_list),
+            "explanation": exp
+        })
+    return total_points, entries
+
+
 def calculate_risk_score(
     timestamp_result=None,
     eventlog_result=None,
@@ -74,80 +126,31 @@ def calculate_risk_score(
 
     # 1. Timestamp Analysis Indicators
     if timestamp_result and timestamp_result.get("anomaly_detected"):
-        indicators = timestamp_result.get("indicators", [])
-        # Group by distinct indicator type
-        distinct_types = {}
-        for ind in indicators:
-            itype = ind.get("type")
-            if itype not in distinct_types:
-                distinct_types[itype] = []
-            distinct_types[itype].append(ind)
-
-        for itype, occ_list in distinct_types.items():
-            points = INDICATOR_WEIGHTS.get(itype, 0)
-            total_score += points
-            exp = occ_list[0].get("explanation", "")
-            if len(occ_list) > 1:
-                exp = f"{exp} ({len(occ_list)} occurrences detected)"
-            contributing_indicators.append({
-                "type": f"{itype} (Timestamp)",
-                "points": points,
-                "base_weight": points,
-                "occurrences": len(occ_list),
-                "explanation": exp
-            })
+        pts, entries = _score_indicator_group(
+            timestamp_result.get("indicators", []), "(Timestamp)"
+        )
+        total_score += pts
+        contributing_indicators.extend(entries)
 
     # 2. Event Log Analysis Indicators
     if eventlog_result and eventlog_result.get("anomaly_detected"):
-        indicators = eventlog_result.get("indicators", [])
-        distinct_types = {}
-        for ind in indicators:
-            itype = ind.get("type")
-            if itype not in distinct_types:
-                distinct_types[itype] = []
-            distinct_types[itype].append(ind)
-
-        for itype, occ_list in distinct_types.items():
-            points = INDICATOR_WEIGHTS.get(itype, 0)
-            total_score += points
-            exp = occ_list[0].get("explanation", "")
-            if len(occ_list) > 1:
-                exp = f"{exp} ({len(occ_list)} occurrences detected)"
-            contributing_indicators.append({
-                "type": f"{itype} (Event Log)",
-                "points": points,
-                "base_weight": points,
-                "occurrences": len(occ_list),
-                "explanation": exp
-            })
+        pts, entries = _score_indicator_group(
+            eventlog_result.get("indicators", []), "(Event Log)"
+        )
+        total_score += pts
+        contributing_indicators.extend(entries)
 
     # 3. Browser Artifact Analysis Indicators
     if browser_result and browser_result.get("anomaly_detected"):
-        indicators = browser_result.get("indicators", [])
-        distinct_types = {}
-        for ind in indicators:
-            itype = ind.get("type")
-            if itype not in distinct_types:
-                distinct_types[itype] = []
-            distinct_types[itype].append(ind)
-
-        for itype, occ_list in distinct_types.items():
-            points = INDICATOR_WEIGHTS.get(itype, 0)
-            total_score += points
-            exp = occ_list[0].get("explanation", "")
-            if len(occ_list) > 1:
-                exp = f"{exp} ({len(occ_list)} occurrences detected)"
-            contributing_indicators.append({
-                "type": f"{itype} (Browser)",
-                "points": points,
-                "base_weight": points,
-                "occurrences": len(occ_list),
-                "explanation": exp
-            })
+        pts, entries = _score_indicator_group(
+            browser_result.get("indicators", []), "(Browser)"
+        )
+        total_score += pts
+        contributing_indicators.extend(entries)
 
     # 4. Hidden File Check Indicator
     if hidden_file_result and hidden_file_result.get("anomaly_detected"):
-        points = INDICATOR_WEIGHTS.get("Hidden File", 10)
+        points = INDICATOR_WEIGHTS.get("Hidden File", 0)
         total_score += points
         contributing_indicators.append({
             "type": "Hidden File",
@@ -159,27 +162,11 @@ def calculate_risk_score(
 
     # 5. NTFS Artifact Analysis Indicators
     if ntfs_result and ntfs_result.get("anomaly_detected"):
-        indicators = ntfs_result.get("indicators", [])
-        distinct_types = {}
-        for ind in indicators:
-            itype = ind.get("type")
-            if itype not in distinct_types:
-                distinct_types[itype] = []
-            distinct_types[itype].append(ind)
-
-        for itype, occ_list in distinct_types.items():
-            points = INDICATOR_WEIGHTS.get(itype, 25)
-            total_score += points
-            exp = occ_list[0].get("explanation", "")
-            if len(occ_list) > 1:
-                exp = f"{exp} ({len(occ_list)} occurrences detected)"
-            contributing_indicators.append({
-                "type": f"{itype} (NTFS)",
-                "points": points,
-                "base_weight": points,
-                "occurrences": len(occ_list),
-                "explanation": exp
-            })
+        pts, entries = _score_indicator_group(
+            ntfs_result.get("indicators", []), "(NTFS)"
+        )
+        total_score += pts
+        contributing_indicators.extend(entries)
 
     # 6. YARA Cross-Artifact Analysis
     #

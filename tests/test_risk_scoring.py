@@ -331,3 +331,77 @@ def test_score_bounded_at_100():
     )
     assert result["score"] <= 100
     assert result["risk_level"] == "HIGH"
+
+
+# ---------------------------------------------------------------------------
+# Test 12: NTFS unknown type — fallback must be 0, not 25
+# ---------------------------------------------------------------------------
+
+def test_ntfs_unknown_type_scores_zero():
+    """An NTFS indicator whose type has no configured weight must contribute
+    0 points, not the old phantom fallback of 25."""
+    result = calculate_risk_score(ntfs_result={
+        "anomaly_detected": True,
+        "indicators": [{"type": "NTFS Unknown Future Type", "explanation": "test"}]
+    })
+    ci = result["contributing_indicators"]
+    assert len(ci) == 1, "Expected exactly 1 contributing indicator"
+    assert ci[0]["points"] == 0, (
+        f"Unknown NTFS type should score 0, got {ci[0]['points']}"
+    )
+    assert result["score"] == 0, (
+        f"Total score should be 0 for unknown NTFS type, got {result['score']}"
+    )
+    assert result["risk_level"] == "LOW", (
+        f"Severity should be LOW, got {result['risk_level']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 13: NTFS known type — weight unchanged after fallback fix
+# ---------------------------------------------------------------------------
+
+def test_ntfs_known_type_still_scores_correctly():
+    """'NTFS Timestamp Discrepancy' must still resolve to its configured weight
+    (25 pts) after the fallback was changed from 25 to 0."""
+    expected_pts = INDICATOR_WEIGHTS["NTFS Timestamp Discrepancy"]  # 25
+    result = calculate_risk_score(ntfs_result={
+        "anomaly_detected": True,
+        "indicators": [{"type": "NTFS Timestamp Discrepancy", "explanation": "m"}]
+    })
+    ci = result["contributing_indicators"]
+    assert len(ci) == 1
+    assert ci[0]["points"] == expected_pts, (
+        f"Expected {expected_pts} pts for 'NTFS Timestamp Discrepancy', "
+        f"got {ci[0]['points']}"
+    )
+    assert result["score"] == expected_pts
+    assert result["risk_level"] == "LOW"   # 25 < 30 threshold
+
+
+# ---------------------------------------------------------------------------
+# Test 14: NTFS mixed known + unknown — unknown does not pollute known score
+# ---------------------------------------------------------------------------
+
+def test_ntfs_unknown_type_does_not_pollute_known_score():
+    """When both a known and an unknown NTFS type appear together, the unknown
+    type must not add points; only the known type contributes."""
+    known_pts = INDICATOR_WEIGHTS["NTFS Timestamp Discrepancy"]  # 25
+    result = calculate_risk_score(ntfs_result={
+        "anomaly_detected": True,
+        "indicators": [
+            {"type": "NTFS Timestamp Discrepancy", "explanation": "known"},
+            {"type": "NTFS Unknown Future Type",   "explanation": "unknown"},
+        ]
+    })
+    assert result["score"] == known_pts, (
+        f"Score should be {known_pts} (known only); unknown must add 0, "
+        f"got {result['score']}"
+    )
+    unknown_ci = [
+        ci for ci in result["contributing_indicators"]
+        if ci["type"] == "NTFS Unknown Future Type (NTFS)"
+    ]
+    assert len(unknown_ci) == 1
+    assert unknown_ci[0]["points"] == 0
+

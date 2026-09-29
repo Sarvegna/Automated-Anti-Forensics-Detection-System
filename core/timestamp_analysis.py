@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime, timezone
 from core.evidence_object import identify_source_type
@@ -5,6 +6,8 @@ from core.evidence_object import identify_source_type
 # Tolerance threshold (2.0 seconds) to account for FAT32 2-second timestamp resolution,
 # file copy/stream creation buffering, and sub-second float precision differences.
 TOLERANCE_SECONDS = 2.0
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_timestamps(evidence_input, source_metadata=None):
@@ -19,7 +22,7 @@ def analyze_timestamps(evidence_input, source_metadata=None):
     - Accessed Before Created (with > 2.0s tolerance)
     - Future Timestamp (relative to UTC current time + 2.0s tolerance)
 
-    Prints exact compared values for forensic traceability and debugging.
+    Logs exact compared values at DEBUG level for forensic traceability.
     """
     if hasattr(evidence_input, "path") and hasattr(evidence_input, "source_type"):
         file_path = evidence_input.path
@@ -70,34 +73,53 @@ def analyze_timestamps(evidence_input, source_metadata=None):
     now_raw = datetime.now(timezone.utc).timestamp()
     now_dt = datetime.fromtimestamp(now_raw, tz=timezone.utc)
 
-    # Detailed debugging output showing exact compared float values and microsecond precision
-    print("\n[DEBUG] --- TIMESTAMP NUMERICAL COMPARISON CHECK ---")
-    print(f"[DEBUG] File Path: {file_path}")
-    print(f"[DEBUG] Source Type: {source_type}")
+    # Detailed debug output showing exact compared float values and microsecond precision
+    logger.debug("--- TIMESTAMP NUMERICAL COMPARISON CHECK ---")
+    logger.debug("File Path: %s | Source Type: %s", file_path, source_type)
     if created_dt:
-        print(f"[DEBUG] Created : {created_dt.strftime('%Y-%m-%d %H:%M:%S.%f')} UTC (raw float: {created_raw:.6f})")
+        logger.debug(
+            "Created : %s UTC (raw float: %.6f)",
+            created_dt.strftime("%Y-%m-%d %H:%M:%S.%f"),
+            created_raw,
+        )
     else:
-        print("[DEBUG] Created : Unavailable (Web Upload Stream)")
+        logger.debug("Created : Unavailable (Web Upload Stream)")
 
     if modified_dt:
-        print(f"[DEBUG] Modified: {modified_dt.strftime('%Y-%m-%d %H:%M:%S.%f')} UTC (raw float: {modified_raw:.6f})")
+        logger.debug(
+            "Modified: %s UTC (raw float: %.6f)",
+            modified_dt.strftime("%Y-%m-%d %H:%M:%S.%f"),
+            modified_raw,
+        )
     else:
-        print("[DEBUG] Modified: Unavailable")
+        logger.debug("Modified: Unavailable")
 
     if accessed_dt:
-        print(f"[DEBUG] Accessed: {accessed_dt.strftime('%Y-%m-%d %H:%M:%S.%f')} UTC (raw float: {accessed_raw:.6f})")
+        logger.debug(
+            "Accessed: %s UTC (raw float: %.6f)",
+            accessed_dt.strftime("%Y-%m-%d %H:%M:%S.%f"),
+            accessed_raw,
+        )
     else:
-        print("[DEBUG] Accessed: Unavailable")
+        logger.debug("Accessed: Unavailable")
 
-    print(f"[DEBUG] System  : {now_dt.strftime('%Y-%m-%d %H:%M:%S.%f')} UTC (raw float: {now_raw:.6f})")
-    print(f"[DEBUG] Tolerance Threshold: > {TOLERANCE_SECONDS}s")
+    logger.debug(
+        "System  : %s UTC (raw float: %.6f)",
+        now_dt.strftime("%Y-%m-%d %H:%M:%S.%f"),
+        now_raw,
+    )
+    logger.debug("Tolerance Threshold: > %ss", TOLERANCE_SECONDS)
 
     indicators = []
 
     # Check 1: Modified < Created (Modified time is earlier than Created time by more than TOLERANCE_SECONDS)
     if created_raw is not None and modified_raw is not None:
         mod_created_diff = created_raw - modified_raw
-        print(f"[DEBUG] Check 1 (Modified < Created): created_raw - modified_raw = {mod_created_diff:.6f}s (Trigger if > {TOLERANCE_SECONDS}s)")
+        logger.debug(
+            "Check 1 (Modified < Created): created_raw - modified_raw = %.6fs (Trigger if > %ss)",
+            mod_created_diff,
+            TOLERANCE_SECONDS,
+        )
         if mod_created_diff > TOLERANCE_SECONDS:
             indicators.append({
                 "type": "Modified Before Created",
@@ -111,7 +133,11 @@ def analyze_timestamps(evidence_input, source_metadata=None):
     # Check 2: Accessed < Created (Accessed time is earlier than Created time by more than TOLERANCE_SECONDS)
     if created_raw is not None and accessed_raw is not None:
         acc_created_diff = created_raw - accessed_raw
-        print(f"[DEBUG] Check 2 (Accessed < Created): created_raw - accessed_raw = {acc_created_diff:.6f}s (Trigger if > {TOLERANCE_SECONDS}s)")
+        logger.debug(
+            "Check 2 (Accessed < Created): created_raw - accessed_raw = %.6fs (Trigger if > %ss)",
+            acc_created_diff,
+            TOLERANCE_SECONDS,
+        )
         if acc_created_diff > TOLERANCE_SECONDS:
             indicators.append({
                 "type": "Accessed Before Created",
@@ -159,11 +185,9 @@ def analyze_timestamps(evidence_input, source_metadata=None):
                 )
             })
 
-    print(f"[DEBUG] Anomaly Detected: {len(indicators) > 0}")
-    if indicators:
-        for ind in indicators:
-            print(f"[DEBUG]   - [{ind['type']}] {ind['explanation']}")
-    print()
+    logger.debug("Anomaly Detected: %s", len(indicators) > 0)
+    for ind in indicators:
+        logger.debug("  - [%s] %s", ind["type"], ind["explanation"])
 
     if is_web_upload:
         provenance_category = "browser_upload"

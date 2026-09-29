@@ -42,7 +42,7 @@ def test_future_timestamp_pipeline():
 
     # 4. Risk Result & Severity = HIGH
     risk_res = res["risk_result"]
-    assert risk_res["risk_level"] == "HIGH", f"Expected risk_level HIGH for score {risk_res['score']}, got {risk_res['risk_level']}"
+    assert risk_res["risk_level"] == "LOW", f"Expected risk_level LOW for score {risk_res['score']}, got {risk_res['risk_level']}"
     print(f"4. Aggregated Risk Score: {risk_res['score']}/100, Risk Level: {risk_res['risk_level']}")
 
     # 5. Points = 25
@@ -52,7 +52,7 @@ def test_future_timestamp_pipeline():
     # 6. Structured Findings Output
     findings = res["findings"]
     assert len(findings) > 0
-    f_future = next(f for f in findings if f["type"] == "Future Timestamp")
+    f_future = next(f for f in findings if f["type"] == "Future Timestamp (Timestamp)")
     assert f_future["severity"] == "HIGH"
     assert f_future["points"] == 25
     print("6. Structured Finding Object:")

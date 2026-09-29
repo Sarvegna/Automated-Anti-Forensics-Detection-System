@@ -3,7 +3,7 @@ import sys
 import os
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 import altair as alt
 
@@ -364,13 +364,13 @@ if selected_page == "Investigation":
     if is_investigator_provided:
         input_method_choice = st.radio(
             "Evidence Input Method",
-            ["Upload Evidence File", "Local Evidence Path"],
+            ["Browser Upload", "Local Evidence Path"],
             key="evidence_input_method_radio"
         )
     else:
         st.info("🔒 Evidence Input is disabled. Enter the Investigator Name above to unlock input options.")
 
-    if input_method_choice == "Upload Evidence File":
+    if input_method_choice == "Browser Upload":
         with st.container():
             uploaded_file = st.file_uploader(
                 "Upload Evidence File",
@@ -572,7 +572,7 @@ if selected_page == "Investigation":
         meta = st.session_state.evidence_meta
         ident = result.get("identification", {})
 
-        st.markdown('<div class="section-heading">4. Uploaded Evidence Metadata & Identification</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">4. Evidence Metadata &amp; Identification</div>', unsafe_allow_html=True)
         
         info_col1, info_col2, info_col3, info_col4 = st.columns(4)
         with info_col1:
@@ -661,7 +661,7 @@ if selected_page == "Investigation":
 # PAGE 2: ANALYSIS OVERVIEW & VISUALIZATIONS
 # -----------------------------------------------------------------------------
 elif selected_page == "Analysis Overview":
-    st.markdown('<div class="page-heading">MAIN ANALYSIS OVERVIEW & VISUALIZATIONS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-heading">ANALYSIS OVERVIEW &amp; VISUALIZATIONS</div>', unsafe_allow_html=True)
 
     if st.session_state.pipeline_result is None:
         st.info("ℹ️ No evidence loaded. Please complete Investigator setup and upload evidence on the **Investigation** page.")
@@ -736,7 +736,7 @@ elif selected_page == "Analysis Overview":
             }
 
             chart_mod = alt.Chart(df_mod).mark_bar(cornerRadiusEnd=4).encode(
-                x=alt.X('Count:Q', title='Modules Count',
+                x=alt.X('Count:Q', title='Module Count',
                         axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15, tickMinStep=1)),
                 y=alt.Y('Status:N', title='Execution Status', sort='-x',
                         axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15)),
@@ -755,9 +755,14 @@ elif selected_page == "Analysis Overview":
         if ts_res and isinstance(ts_res, dict):
             indicators = ts_res.get("indicators", [])
 
-            def format_evidence_ts(dt_obj):
+            _BROWSER_UPLOAD_LABEL = "N/A — Not available through browser upload"
+            _is_browser_upload = (
+                ts_res.get("timestamp_provenance", {}).get("category") == "browser_upload"
+            )
+
+            def format_evidence_ts(dt_obj, browser_na=False):
                 if dt_obj is None:
-                    return "Unavailable"
+                    return _BROWSER_UPLOAD_LABEL if browser_na else "Unavailable"
                 if hasattr(dt_obj, "strftime"):
                     try:
                         return dt_obj.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -767,7 +772,7 @@ elif selected_page == "Analysis Overview":
 
             # Event 1: File System Created
             created_dt = ts_res.get("created")
-            created_str = format_evidence_ts(created_dt)
+            created_str = format_evidence_ts(created_dt, browser_na=_is_browser_upload)
             created_anomaly = "Yes" if any(
                 ind.get("type") == "Future Timestamp" and "Created" in ind.get("explanation", "")
                 for ind in indicators
@@ -781,7 +786,7 @@ elif selected_page == "Analysis Overview":
 
             # Event 2: File System Modified
             modified_dt = ts_res.get("modified")
-            modified_str = format_evidence_ts(modified_dt)
+            modified_str = format_evidence_ts(modified_dt)  # never browser_na: Modified is always available
             modified_anomaly = "Yes" if any(
                 ind.get("type") == "Modified Before Created" or (ind.get("type") == "Future Timestamp" and "Modified" in ind.get("explanation", ""))
                 for ind in indicators
@@ -795,7 +800,7 @@ elif selected_page == "Analysis Overview":
 
             # Event 3: File System Accessed
             accessed_dt = ts_res.get("accessed")
-            accessed_str = format_evidence_ts(accessed_dt)
+            accessed_str = format_evidence_ts(accessed_dt, browser_na=_is_browser_upload)
             accessed_anomaly = "Yes" if any(
                 ind.get("type") == "Accessed Before Created" or (ind.get("type") == "Future Timestamp" and "Accessed" in ind.get("explanation", ""))
                 for ind in indicators
@@ -891,7 +896,12 @@ elif selected_page == "Module Results":
         st.markdown(f'<div class="section-heading">{mod_tab_choice}</div>', unsafe_allow_html=True)
 
         m_status = statuses.get(mod_tab_choice, "NOT_APPLICABLE")
-        st.markdown(f"**Execution Status:** <span class='badge badge-success' style='font-size:16px;'>{m_status}</span>", unsafe_allow_html=True)
+        m_status_badge_cls = "badge-success" if m_status == "SUCCESS" else (
+            "badge-medium" if m_status in ("UNSUPPORTED", "MISSING_DEPENDENCY") else (
+                "badge-failed" if m_status in ("FAILED", "CORRUPTED") else "badge-na"
+            )
+        )
+        st.markdown(f"**Execution Status:** <span class='badge {m_status_badge_cls}' style='font-size:16px;'>{m_status}</span>", unsafe_allow_html=True)
 
         m_data = mod_results.get(mod_tab_choice, {})
 
@@ -900,20 +910,34 @@ elif selected_page == "Module Results":
             **Analysis Scope:** Evaluates file system timestamp attributes (`Created`, `Modified`, `Accessed`) to detect timestomping anomalies.
             """)
             if m_data:
+                _mod_is_browser = (
+                    m_data.get("timestamp_provenance", {}).get("category") == "browser_upload"
+                )
+                _BROWSER_NA_LABEL = "N/A — Not available through browser upload"
                 col_t1, col_t2, col_t3 = st.columns(3)
                 with col_t1:
-                    st.metric("Created Timestamp", str(m_data.get("created", "N/A")))
+                    _created_val = m_data.get("created")
+                    _created_display = (
+                        _BROWSER_NA_LABEL if (_mod_is_browser and _created_val is None)
+                        else str(_created_val if _created_val is not None else "N/A")
+                    )
+                    st.metric("Created Timestamp", _created_display)
                 with col_t2:
                     st.metric("Modified Timestamp", str(m_data.get("modified", "N/A")))
                 with col_t3:
-                    st.metric("Accessed Timestamp", str(m_data.get("accessed", "N/A")))
+                    _accessed_val = m_data.get("accessed")
+                    _accessed_display = (
+                        _BROWSER_NA_LABEL if (_mod_is_browser and _accessed_val is None)
+                        else str(_accessed_val if _accessed_val is not None else "N/A")
+                    )
+                    st.metric("Accessed Timestamp", _accessed_display)
 
                 if m_data.get("anomaly_detected"):
                     indicators = m_data.get("indicators", [])
                     for ind in indicators:
                         ind_type = ind.get("type", "Timestomping Anomaly")
                         ind_exp = ind.get("explanation", "N/A")
-                        pts = INDICATOR_WEIGHTS.get(ind_type, 20)
+                        pts = INDICATOR_WEIGHTS.get(ind_type, 0)
                         sev = severity_from_points(pts)
 
                         st.markdown(f"""
@@ -939,7 +963,7 @@ elif selected_page == "Module Results":
 
         elif mod_tab_choice == "Hidden File Check":
             st.markdown("""
-            **Analysis Scope:** Inspects file system attributes to identify hidden or hidden-system file markers used for concealment.
+            **Analysis Scope:** Inspects file system attributes to identify hidden and system-hidden file markers used for concealment.
             """)
             if m_data:
                 st.metric("Hidden Attribute Set", "TRUE" if m_data.get("is_hidden") else "FALSE")
@@ -947,7 +971,7 @@ elif selected_page == "Module Results":
 
         elif mod_tab_choice == "YARA Analysis":
             st.markdown("""
-            **Analysis Scope:** Scans evidence byte streams against compiled anti-forensic YARA rules (detecting log cleaners, timestompers, and wipers).
+            **Analysis Scope:** Scans evidence byte streams against compiled anti-forensic YARA rules (detecting log cleaners, timestomping tools, and wipers).
             """)
             if m_data:
                 # yara_analysis returns matches under data["matched_rules"]
@@ -995,7 +1019,7 @@ elif selected_page == "Module Results":
 
         elif mod_tab_choice == "Browser Artifact Analysis":
             st.markdown("""
-            **Analysis Scope:** Analyzes Chromium/Firefox SQLite history databases for visit timelines, deleted history gaps, and table modifications.
+            **Analysis Scope:** Analyzes Chromium-based browser SQLite history databases for visit timelines, deleted history gaps, and table modifications.
             """)
             if m_status in ["SUCCESS", "CORRUPTED", "FAILED"]:
                 b_info = m_data.get("data", {})
@@ -1032,7 +1056,7 @@ elif selected_page == "Module Results":
                         </div>
                         """, unsafe_allow_html=True)
 
-                visits = b_info.get("visits_sample", [])
+                visits = b_info.get("visits", [])
                 if visits:
                     st.markdown("**Sample Extracted Browser Visits:**")
                     st.dataframe(pd.DataFrame(visits))
@@ -1073,7 +1097,7 @@ elif selected_page == "Module Results":
                     st.markdown('<div class="section-heading" style="font-size:18px; margin-top:16px;">Detected Anti-Forensics Indicators & Occurrences</div>', unsafe_allow_html=True)
 
                     for cat_name, occ_list in distinct_categories.items():
-                        cat_pts = INDICATOR_WEIGHTS.get(cat_name, 20)
+                        cat_pts = INDICATOR_WEIGHTS.get(cat_name, 0)
                         cat_sev = severity_from_points(cat_pts)
                         sev_badge_cls = "badge-high" if cat_sev == "HIGH" else ("badge-medium" if cat_sev == "MEDIUM" else "badge-low")
                         border_color = "#ef4444" if cat_sev == "HIGH" else ("#eab308" if cat_sev == "MEDIUM" else "#22c55e")

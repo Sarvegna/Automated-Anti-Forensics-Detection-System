@@ -1,3 +1,4 @@
+import logging
 import os
 from core.evidence_object import EvidenceObject, create_evidence_object, identify_source_type
 from core.validation import validate_evidence_file
@@ -13,6 +14,8 @@ from core.ntfs_analysis import analyze_ntfs_image
 from core.yara_analysis import analyze_with_yara
 from core.risk_scoring import calculate_risk_score
 from core.findings import build_findings_from_risk_result
+
+logger = logging.getLogger(__name__)
 
 
 def run_automated_analysis(evidence_input, evidence_reference=None, source_metadata=None):
@@ -179,13 +182,9 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
         )
     )
 
-    print("\n[DEBUG] --- BROWSER ARTIFACT ANALYSIS ROUTER CHECK ---")
-    print(f"[DEBUG] file_path: {file_path}")
-    print(f"[DEBUG] filename (evidence_reference): {evidence_reference}")
-    print(f"[DEBUG] extension: {ext}")
-    print(f"[DEBUG] identification result: {identification}")
-    print(f"[DEBUG] evidence_type: {identification.get('evidence_type')}")
-    print(f"[DEBUG] router condition evaluated: {is_browser_candidate}")
+    logger.debug("--- BROWSER ARTIFACT ANALYSIS ROUTER CHECK ---")
+    logger.debug("file_path: %s | evidence_reference: %s | extension: %s", file_path, evidence_reference, ext)
+    logger.debug("evidence_type: %s | router condition: %s", identification.get("evidence_type"), is_browser_candidate)
 
     if is_browser_candidate:
         applicable_modules.append("Browser Artifact Analysis")
@@ -202,11 +201,12 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
         # Injecting direct findings here produced +0 pts entries that won the
         # deduplication check and displaced the scored risk finding.
 
-        print(f"[DEBUG] browser_db_result: {browser_db_result}")
-        print(f"[DEBUG] browser_db_result['status']: {browser_db_result.get('status')}")
-        print(f"[DEBUG] browser_db_result['warnings']: {browser_db_result.get('warnings')}")
-        print(f"[DEBUG] browser_db_result['errors']: {browser_db_result.get('errors')}")
-        print(f"[DEBUG] browser_db_result['metadata']: {browser_db_result.get('metadata')}\n")
+        logger.debug(
+            "browser_db_result status: %s | warnings: %s | errors: %s",
+            browser_db_result.get("status"),
+            browser_db_result.get("warnings"),
+            browser_db_result.get("errors"),
+        )
     else:
         module_statuses["Browser Artifact Analysis"] = "NOT_APPLICABLE"
 
