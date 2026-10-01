@@ -1,7 +1,7 @@
 import uuid
 
 
-def create_finding(finding_type, severity, evidence_reference, reason, source):
+def create_finding(finding_type, severity, evidence_reference, reason, source, points=0):
     """
     Creates a structured, traceable finding record.
     """
@@ -11,6 +11,7 @@ def create_finding(finding_type, severity, evidence_reference, reason, source):
         "finding_id": finding_id,
         "type": finding_type,
         "severity": severity,
+        "points": points,
         "evidence": evidence_reference,
         "reason": reason,
         "source": source
@@ -36,13 +37,15 @@ def build_findings_from_risk_result(risk_result, evidence_reference):
     """
     findings = []
 
-    for indicator in risk_result["contributing_indicators"]:
+    for indicator in risk_result.get("contributing_indicators", []):
+        points = indicator.get("points", 0)
         finding = create_finding(
             finding_type=indicator["type"],
-            severity=severity_from_points(indicator["points"]),
+            severity=severity_from_points(points),
             evidence_reference=evidence_reference,
             reason=indicator["explanation"],
-            source=indicator["type"]
+            source=indicator["type"],
+            points=points
         )
         findings.append(finding)
 

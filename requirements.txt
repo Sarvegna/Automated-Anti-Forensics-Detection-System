@@ -1,0 +1,4 @@
+streamlit>=1.30.0
+python-evtx>=0.7.4
+yara-python>=4.3.0
+volatility3>=2.5.0
