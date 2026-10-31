@@ -39,179 +39,608 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
-    /* Global Dark Charcoal Surface & Standard IBM Plex Sans Typography */
     html, body, [class*="css"], .stApp {
-        background-color: #0f131d !important;
-        color: #f1f5f9 !important;
-        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        font-size: 17px !important;
+        background: #E9EEF3 !important;
+        color: #263238 !important;
+        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        font-size: 16px !important;
         line-height: 1.5 !important;
     }
 
-    /* Sidebar Dark Slate Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #161b26 !important;
-        border-right: 1px solid #252d3d !important;
-    }
-    section[data-testid="stSidebar"] [class*="css"] {
-        color: #f1f5f9 !important;
-    }
-    section[data-testid="stSidebar"] label {
-        color: #e2e8f0 !important;
-        font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
+    .stApp {
+        background: #E9EEF3 !important;
     }
 
-    /* Technical Elements Monospace Class */
+    [data-testid="stAppViewContainer"] > .main {
+        background: #E9EEF3 !important;
+        padding-top: 0 !important;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: #172B3A !important;
+        border-right: 1px solid #405463 !important;
+        padding-top: 0.5rem !important;
+    }
+
+    section[data-testid="stSidebar"] > div,
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        background: #172B3A !important;
+    }
+
+    section[data-testid="stSidebar"] [class*="css"],
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] p {
+        color: #D5E0E8 !important;
+    }
+
+    section[data-testid="stSidebar"] .stRadio > div {
+        width: 100%;
+        gap: 0.4rem;
+        align-items: stretch;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stElementContainer"]:has([data-testid="stRadio"]),
+    section[data-testid="stSidebar"] [data-testid="stRadio"] {
+        width: 100% !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stRadioGroup"],
+    section[data-testid="stSidebar"] [data-testid="stRadioGroup"] > div {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    section[data-testid="stSidebar"] label[data-testid="stRadioOption"] {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        align-items: center !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        border-left: 3px solid transparent !important;
+        border-radius: 6px !important;
+        padding: 0.55rem 0.7rem !important;
+        margin: 0.08rem 0 !important;
+        color: #D5E0E8 !important;
+        transition: background-color 140ms ease, border-color 140ms ease;
+    }
+
+    section[data-testid="stSidebar"] label[data-testid="stRadioOption"]:hover {
+        background: #263D50 !important;
+        border-color: #405463 !important;
+    }
+
+    section[data-testid="stSidebar"] label[data-testid="stRadioOption"][data-selected="true"] {
+        background: #29465D !important;
+        border-color: #405463 !important;
+        border-left-color: #35A3D1 !important;
+        color: #FFFFFF !important;
+    }
+
+    section[data-testid="stSidebar"] label[data-testid="stRadioOption"][data-selected="true"] > div > div:first-child {
+        background: #35A3D1 !important;
+        border-color: #35A3D1 !important;
+    }
+
+    section[data-testid="stSidebar"] label[data-testid="stRadioOption"]:focus-visible {
+        outline: 2px solid #35A3D1 !important;
+        outline-offset: 2px !important;
+    }
+
+    section[data-testid="stSidebar"] hr {
+        border-color: #405463 !important;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        background: transparent !important;
+        border: 1px solid #405463 !important;
+        color: #FFFFFF !important;
+        text-align: left !important;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background: #263D50 !important;
+        border-color: #35A3D1 !important;
+    }
+
+    section[data-testid="stSidebar"] .badge-success,
+    section[data-testid="stSidebar"] .badge-low {
+        color: #18794E !important;
+    }
+
+    section[data-testid="stSidebar"] .badge-medium,
+    section[data-testid="stSidebar"] .badge-unsupported {
+        color: #805500 !important;
+    }
+
+    section[data-testid="stSidebar"] .badge-high,
+    section[data-testid="stSidebar"] .badge-failed {
+        color: #B42318 !important;
+    }
+
+    section[data-testid="stSidebar"] .badge-na {
+        color: #465665 !important;
+    }
+
+    section[data-testid="stSidebar"] code {
+        color: #D5E0E8 !important;
+        background: #203747 !important;
+        overflow-wrap: anywhere;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 640px) {
+        section[data-testid="stSidebar"] label[data-testid="stRadioOption"] {
+            padding: 0.5rem 0.55rem !important;
+        }
+    }
+
     .tech-mono, .finding-id, code, pre, .stCodeBlock {
         font-family: 'IBM Plex Mono', monospace !important;
     }
 
-    /* Titles and Headings Hierarchy */
-    .main-title {
+    .main-header {
+        background: linear-gradient(90deg, #398FBA 0%, #2F82AF 100%);
+        border-bottom: 1px solid #2b6d93;
+        margin: -1rem -0.9rem 1.2rem -0.9rem;
+        padding: 1rem 1.2rem 0.9rem 1.2rem;
+        box-shadow: 0 2px 0 rgba(23, 47, 61, 0.08);
+    }
+
+    .main-header .app-kicker {
         font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 34px !important;
-        font-weight: 700 !important;
-        color: #ffffff !important;
-        letter-spacing: 0.5px !important;
-        margin-bottom: 24px !important;
+        color: rgba(255,255,255,0.8) !important;
+        font-size: 12px !important;
         text-transform: uppercase !important;
-        border-bottom: 2px solid #252d3d !important;
-        padding-bottom: 14px !important;
+        letter-spacing: 0.16em !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    .main-header .app-title {
+        font-family: 'IBM Plex Sans', sans-serif !important;
+        color: #ffffff !important;
+        font-size: clamp(1.4rem, 2vw, 2rem) !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.02em !important;
+        margin: 0 !important;
+    }
+
+    .main-header .app-subtitle {
+        font-family: 'IBM Plex Sans', sans-serif !important;
+        color: rgba(255,255,255,0.9) !important;
+        font-size: 0.92rem !important;
+        margin-top: 0.2rem !important;
+        font-weight: 500 !important;
     }
 
     .page-heading {
         font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 25px !important;
+        color: #1E2A32 !important;
+        font-size: 1.9rem !important;
         font-weight: 700 !important;
-        color: #ffffff !important;
-        margin-top: 6px !important;
-        margin-bottom: 20px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 0.01em !important;
+        margin: 0.25rem 0 1rem !important;
     }
 
     .section-heading {
         font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 22px !important;
-        font-weight: 600 !important;
-        color: #ffffff !important;
-        margin-top: 24px !important;
-        margin-bottom: 14px !important;
+        color: #1E2A32 !important;
+        background: #DDEAF3 !important;
+        border: 1px solid #C9DDEB !important;
+        border-left: 4px solid #398FBA !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.12em !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-        border-left: 4px solid #3b82f6 !important;
-        padding-left: 12px !important;
+        padding: 0.7rem 0.9rem !important;
+        margin-top: 1.3rem !important;
+        margin-bottom: 0.9rem !important;
+        border-radius: 0 !important;
     }
 
-    /* Charcoal Panel Cards */
     .dark-panel {
-        background-color: #1a2130 !important;
-        border: 1px solid #2b354d !important;
-        border-radius: 8px !important;
-        padding: 20px !important;
-        margin-bottom: 20px !important;
-        font-size: 17px !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #DDE7EE !important;
+        border-left: 4px solid #398FBA !important;
+        border-radius: 0 !important;
+        padding: 1rem 1.1rem !important;
+        margin-bottom: 1rem !important;
+        box-shadow: 0 1px 0 rgba(18, 31, 38, 0.04) !important;
     }
 
-    /* Metrics Styling */
     div[data-testid="stMetric"] {
-        background-color: #1a2130 !important;
-        border: 1px solid #2b354d !important;
-        border-radius: 8px !important;
-        padding: 16px 20px !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #DDE7EE !important;
+        border-left: 4px solid #00BBDD !important;
+        border-radius: 0 !important;
+        padding: 0.8rem 0.9rem !important;
+        box-shadow: 0 1px 0 rgba(18, 31, 38, 0.04) !important;
     }
+
     div[data-testid="stMetric"] label {
-        color: #94a3b8 !important;
+        color: #52636d !important;
         font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
+        font-size: 0.73rem !important;
+        font-weight: 700 !important;
         text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
     }
+
     div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
+        color: #1E2A32 !important;
         font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 26px !important;
+        font-size: 1.7rem !important;
         font-weight: 700 !important;
     }
 
-    /* Custom Tables */
     .forensic-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 10px;
-        margin-bottom: 20px;
-        background-color: #1a2130;
-        border: 1px solid #2b354d;
-        border-radius: 8px;
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+        background-color: #FFFFFF;
+        border: 1px solid #DDE7EE;
+        border-radius: 0;
         overflow: hidden;
     }
-    .forensic-table th {
-        background-color: #222c40;
-        color: #cbd5e1;
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 16px;
-        font-weight: 600;
-        text-align: left;
-        padding: 14px 16px;
-        border-bottom: 1px solid #2b354d;
-    }
-    .forensic-table td {
-        color: #f1f5f9;
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 16px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #252d3d;
-    }
-    .forensic-table tr:hover {
-        background-color: #222a3d;
-    }
 
-    /* Badges */
-    .badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 14px;
+    .forensic-table th {
+        background-color: #EDF4F8;
+        color: #263238 !important;
+        font-family: 'IBM Plex Sans', sans-serif;
+        font-size: 0.76rem;
         font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.08em;
+        text-align: left;
+        padding: 0.8rem 0.9rem;
+        border-bottom: 1px solid #DDE7EE;
     }
-    .badge-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid #22c55e; }
-    .badge-low { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid #22c55e; }
-    .badge-medium { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid #eab308; }
-    .badge-unsupported { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid #eab308; }
-    .badge-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; }
-    .badge-failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; }
-    .badge-na { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid #64748b; }
 
-    /* Risk Score Banner */
+    .forensic-table td {
+        color: #263238 !important;
+        font-family: 'IBM Plex Sans', sans-serif;
+        font-size: 0.94rem;
+        padding: 0.75rem 0.9rem;
+        border-bottom: 1px solid #EEF3F7;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .forensic-table {
+        table-layout: fixed;
+    }
+
+    .forensic-table td.audit-action {
+        color: #175B7A !important;
+        font-weight: 600;
+    }
+
+    .audit-log-table th:nth-child(1) { width: 17%; }
+    .audit-log-table th:nth-child(2) { width: 14%; }
+    .audit-log-table th:nth-child(3),
+    .audit-log-table th:nth-child(4) { width: 12%; }
+    .audit-log-table th:nth-child(5) { width: 15%; }
+    .audit-log-table th:nth-child(6) { width: 30%; }
+
+    .forensic-table td.tech-mono {
+        color: #203747 !important;
+        font-size: 0.82rem;
+    }
+
+    .findings-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        margin: 0.75rem 0 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid #CFD9E2;
+        background: #FFFFFF;
+    }
+
+    .forensic-table.findings-table {
+        width: 100%;
+        min-width: 1080px;
+        margin: 0;
+        table-layout: fixed;
+        overflow: visible;
+        background: #FFFFFF;
+    }
+
+    .forensic-table.findings-table th {
+        background: #203747 !important;
+        color: #FFFFFF !important;
+        border-right: 1px solid #405463;
+        border-bottom: 1px solid #405463;
+        padding: 0.8rem 0.75rem;
+        vertical-align: middle;
+        white-space: normal;
+    }
+
+    .forensic-table.findings-table td {
+        color: #263238 !important;
+        border-right: 1px solid #E1E8EE;
+        border-bottom: 1px solid #E1E8EE;
+        padding: 0.7rem 0.75rem;
+        vertical-align: top;
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    .forensic-table.findings-table th:last-child,
+    .forensic-table.findings-table td:last-child {
+        border-right: 0;
+    }
+
+    .forensic-table.findings-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .forensic-table.findings-table td:nth-child(1),
+    .forensic-table.findings-table td:nth-child(4) {
+        white-space: nowrap;
+    }
+
+    .forensic-table.findings-table td:nth-child(7) {
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    .forensic-table tr:nth-child(even) {
+        background-color: #F8FBFD;
+    }
+
+    .forensic-table tr:hover {
+        background-color: #EEF7FA;
+    }
+
+    section[data-testid="stMain"] [data-testid="stTableStyledTable"] {
+        width: 100%;
+        border-collapse: collapse;
+        color: #263238 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stTableStyledTable"] th {
+        background: #EDF4F8 !important;
+        color: #263238 !important;
+        border-bottom: 1px solid #CFD9E2 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stTableStyledTable"] td {
+        background: #FFFFFF !important;
+        color: #263238 !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    section[data-testid="stMain"] [data-testid="stTableStyledTable"] tbody tr:nth-child(even) td {
+        background: #F8FBFD !important;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.24rem 0.6rem;
+        border-radius: 3px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .badge-success { background: #EAF5EF; color: #18794E; border: 1px solid #B9DDC8; }
+    .badge-low { background: #EAF5EF; color: #18794E; border: 1px solid #B9DDC8; }
+    .badge-medium { background: #FFF4D6; color: #805500; border: 1px solid #E8CF8A; }
+    .badge-unsupported { background: #FFF4D6; color: #805500; border: 1px solid #E8CF8A; }
+    .badge-high { background: #FCEBEA; color: #B42318; border: 1px solid #E8B9B5; }
+    .badge-failed { background: #FCEBEA; color: #B42318; border: 1px solid #E8B9B5; }
+    .badge-na { background: rgba(96, 125, 139, 0.12); color: #546E7A; border: 1px solid rgba(96, 125, 139, 0.25); }
+
     .risk-banner {
-        background-color: #1a2130;
-        border: 1px solid #2b354d;
-        border-radius: 8px;
-        padding: 22px 28px;
+        background-color: #ffffff;
+        border: 1px solid #DDE7EE;
+        border-left: 6px solid #00BBDD;
+        border-radius: 0;
+        padding: 1rem 1.1rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
+        margin-bottom: 1.2rem;
     }
-    .risk-banner.low { border-left: 6px solid #22c55e; }
-    .risk-banner.medium { border-left: 6px solid #eab308; }
-    .risk-banner.high { border-left: 6px solid #ef4444; }
+    .risk-banner.low { border-left-color: #009688; }
+    .risk-banner.medium { border-left-color: #FFB000; }
+    .risk-banner.high { border-left-color: #D32F2F; }
 
-    /* Workflow Stepper */
+    .risk-banner [style*="color"] {
+        color: #203747 !important;
+    }
+
+    .dark-panel [style*="color"] {
+        color: #263238 !important;
+    }
+
+    .evidence-details-table {
+        width: 100%;
+        color: #263238 !important;
+        font-size: 0.94rem;
+        border-collapse: separate;
+        border-spacing: 0 0.4rem;
+        table-layout: fixed;
+    }
+
+    .evidence-details-table td {
+        color: #263238 !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: top;
+    }
+
+    .evidence-details-table td.tech-mono {
+        color: #175B7A !important;
+    }
+
+    .evidence-details-table td .badge {
+        color: inherit;
+    }
+
+    [data-testid="stDownloadButton"] button {
+        background: #202D33 !important;
+        border: 1px solid #202D33 !important;
+        color: #FFFFFF !important;
+        border-radius: 0 !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stDownloadButton"] button * {
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stDownloadButton"] button:hover {
+        background: #2B414A !important;
+        border-color: #398FBA !important;
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stDownloadButton"] button:focus-visible {
+        outline: 3px solid #00BBDD !important;
+        outline-offset: 2px !important;
+    }
+
+    [data-testid="stDownloadButton"] button:disabled {
+        background: #61717A !important;
+        border-color: #61717A !important;
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+    }
+
     .workflow-box {
-        background-color: #1a2130;
-        border: 1px solid #2b354d;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
+        background: #F3F8FB;
+        border: 1px solid #C9DDEB;
+        border-left: 4px solid #398FBA;
+        border-radius: 0;
+        padding: 0.8rem 1rem;
+        margin-bottom: 1rem;
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 15px;
-        color: #60a5fa;
-        text-align: center;
+        font-size: 0.76rem;
+        color: #1E2A32;
+        text-align: left;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .stButton > button {
+        background: #FFFFFF !important;
+        border: 1px solid #C7D7E3 !important;
+        color: #1E2A32 !important;
+        border-radius: 0 !important;
+        padding: 0.55rem 0.8rem !important;
+        font-weight: 600 !important;
+    }
+
+    .stButton > button:hover {
+        border-color: #398FBA !important;
+        box-shadow: none !important;
+    }
+
+    .stSelectbox > div, .stTextInput > div, .stNumberInput > div, .stFileUploader > div {
+        border-radius: 0 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] {
+        background: #FFFFFF !important;
+        border: 1px dashed #AABAC6 !important;
+        border-radius: 8px !important;
+        min-height: 7rem;
+        padding: 1rem !important;
+        transition: background-color 140ms ease, border-color 140ms ease;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"]:hover {
+        background: #F5FAFD !important;
+        border-color: #398FBA !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"],
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] * {
+        color: #465665 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] svg {
+        color: #398FBA !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] button {
+        background: #FFFFFF !important;
+        border: 1px solid #AABAC6 !important;
+        border-radius: 6px !important;
+        color: #203747 !important;
+        font-weight: 600 !important;
+        transition: background-color 140ms ease, border-color 140ms ease;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] button:hover:not(:disabled) {
+        background: #EDF6FA !important;
+        border-color: #398FBA !important;
+        color: #203747 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] button:disabled {
+        background: #F1F4F7 !important;
+        border-color: #CFD9E2 !important;
+        color: #657481 !important;
+        opacity: 1 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stFileUploaderFile"] {
+        background: #FFFFFF !important;
+        border: 1px solid #CFD9E2 !important;
+        color: #263238 !important;
+    }
+
+    .stTabs [role="tablist"] {
+        background: #EEF4F8;
+        border: 1px solid #DDE7EE;
+        border-bottom: none;
+    }
+
+    .stTabs [role="tab"] {
+        color: #436070 !important;
+        font-weight: 600 !important;
+    }
+
+    .stTabs [role="tab"][aria-selected="true"] {
+        background: #FFFFFF;
+        border: 1px solid #DDE7EE;
+        border-bottom: 1px solid #FFFFFF;
+        color: #1E2A32 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stWidgetLabel"],
+    section[data-testid="stMain"] [data-testid="stWidgetLabel"] p,
+    section[data-testid="stMain"] [data-testid="stWidgetLabel"] label {
+        color: #203747 !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stCaptionContainer"],
+    section[data-testid="stMain"] [data-testid="stCaptionContainer"] * {
+        color: #52636D !important;
+    }
+
+    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] p,
+    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] li,
+    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] blockquote {
+        color: #263238;
+    }
+
+    section[data-testid="stMain"] [data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+    section[data-testid="stMain"] [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
+        color: #263238 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -235,16 +664,22 @@ if "active_nav_page" not in st.session_state:
     st.session_state.active_nav_page = "Investigation"
 
 STATUS_COLORS = {
-    "SUCCESS": "#22c55e",
+    "SUCCESS": "#198754",
     "NOT_APPLICABLE": "#64748b",
-    "UNSUPPORTED": "#eab308",
-    "MISSING_DEPENDENCY": "#eab308",
-    "FAILED": "#ef4444",
-    "CORRUPTED": "#ef4444"
+    "UNSUPPORTED": "#E5A000",
+    "MISSING_DEPENDENCY": "#E5A000",
+    "FAILED": "#DC3545",
+    "CORRUPTED": "#DC3545"
 }
 
 # Header Banner
-st.markdown('<div class="main-title">AUTOMATED ANTI-FORENSICS DETECTION SYSTEM</div>', unsafe_allow_html=True)
+st.markdown('''
+<div class="main-header">
+    <div class="app-kicker">Digital Evidence Analysis and Investigation</div>
+    <div class="app-title">AUTOMATED ANTI-FORENSICS DETECTION SYSTEM</div>
+    <div class="app-subtitle">Forensic workstation for evidence validation, module analysis, and case reporting</div>
+</div>
+''', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # SIDEBAR NAVIGATION & DETECTED MODULES
@@ -457,6 +892,17 @@ if selected_page == "Investigation":
                                 investigator=st.session_state.investigator_name,
                                 details=f"Score: {pipeline_result['risk_result']['score']}/100 ({pipeline_result['risk_result']['risk_level']})"
                             )
+                            finding_summary = ", ".join(
+                                f"{finding['type']} [{finding['finding_id']}]"
+                                for finding in pipeline_result["findings"]
+                            )
+                            add_audit_log_entry(
+                                action="Findings Generated",
+                                case_id=st.session_state.case_id,
+                                evidence_id=st.session_state.evidence_id,
+                                investigator=st.session_state.investigator_name,
+                                details=f"{len(pipeline_result['findings'])} finding(s): {finding_summary or 'None'}"
+                            )
 
                             # Save to Persistent Investigation History
                             save_investigation_history(
@@ -550,6 +996,24 @@ if selected_page == "Investigation":
                             investigator=st.session_state.investigator_name,
                             details=f"Type: {ident.get('evidence_type')} (Confidence: {ident.get('confidence')})"
                         )
+                        add_audit_log_entry(
+                            action="Risk Calculated",
+                            case_id=st.session_state.case_id,
+                            evidence_id=st.session_state.evidence_id,
+                            investigator=st.session_state.investigator_name,
+                            details=f"Score: {pipeline_result['risk_result']['score']}/100 ({pipeline_result['risk_result']['risk_level']})"
+                        )
+                        finding_summary = ", ".join(
+                            f"{finding['type']} [{finding['finding_id']}]"
+                            for finding in pipeline_result["findings"]
+                        )
+                        add_audit_log_entry(
+                            action="Findings Generated",
+                            case_id=st.session_state.case_id,
+                            evidence_id=st.session_state.evidence_id,
+                            investigator=st.session_state.investigator_name,
+                            details=f"{len(pipeline_result['findings'])} finding(s): {finding_summary or 'None'}"
+                        )
 
                         save_investigation_history(
                             case_id=st.session_state.case_id,
@@ -599,7 +1063,7 @@ if selected_page == "Investigation":
 
         st.markdown(f"""
         <div class="dark-panel">
-            <table style="width:100%; color:#f1f5f9; font-size:16px; border-collapse:separate; border-spacing:0 8px;">
+            <table class="evidence-details-table">
                 <tr>
                     <td style="width:20%; font-weight:600; color:#cbd5e1;">Case ID:</td>
                     <td class="tech-mono" style="color:#60a5fa;">{st.session_state.case_id}</td>
@@ -700,19 +1164,37 @@ elif selected_page == "Analysis Overview":
             low_cnt = sum(1 for f in findings if f.get("severity") == "LOW")
 
             df_sev = pd.DataFrame([
-                {"Severity": "HIGH", "Count": high_cnt, "Color": "#ef4444"},
-                {"Severity": "MEDIUM", "Count": med_cnt, "Color": "#eab308"},
-                {"Severity": "LOW", "Count": low_cnt, "Color": "#22c55e"}
+                {"Severity": "HIGH", "Count": high_cnt, "Color": "#DC3545"},
+                {"Severity": "MEDIUM", "Count": med_cnt, "Color": "#F0AD4E"},
+                {"Severity": "LOW", "Count": low_cnt, "Color": "#198754"}
             ])
 
             chart_sev = alt.Chart(df_sev).mark_bar(cornerRadiusEnd=4).encode(
                 x=alt.X('Severity:N', title='Finding Severity', sort=['HIGH', 'MEDIUM', 'LOW'],
-                        axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15)),
+                        axis=alt.Axis(labelColor='#465665', titleColor='#203747', labelFontSize=12, titleFontSize=13, labelPadding=7, labelLimit=220)),
                 y=alt.Y('Count:Q', title='Number of Findings',
-                        axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15, tickMinStep=1)),
-                color=alt.Color('Severity:N', scale=alt.Scale(domain=['HIGH', 'MEDIUM', 'LOW'], range=['#ef4444', '#eab308', '#22c55e']), legend=None),
+                        axis=alt.Axis(labelColor='#465665', titleColor='#203747', labelFontSize=12, titleFontSize=13, labelPadding=7, tickMinStep=1)),
+                color=alt.Color('Severity:N', scale=alt.Scale(domain=['HIGH', 'MEDIUM', 'LOW'], range=['#DC3545', '#F0AD4E', '#198754']), legend=None),
                 tooltip=['Severity', 'Count']
-            ).properties(height=260).configure_view(strokeWidth=0)
+            ).properties(
+                height=300,
+                padding={"left": 8, "right": 12, "top": 8, "bottom": 8}
+            ).configure(
+                background="#FFFFFF"
+            ).configure_axis(
+                labelColor="#465665",
+                titleColor="#203747",
+                gridColor="#E1E8EE",
+                gridOpacity=0.8,
+                domainColor="#BDCAD4",
+                tickColor="#BDCAD4",
+                labelFont="IBM Plex Sans",
+                titleFont="IBM Plex Sans",
+                titlePadding=10
+            ).configure_view(
+                fill="#FFFFFF",
+                stroke="#FFFFFF"
+            )
             
             st.altair_chart(chart_sev, use_container_width=True)
 
@@ -727,22 +1209,40 @@ elif selected_page == "Analysis Overview":
             ])
 
             color_map = {
-                "SUCCESS": "#22c55e",
+                "SUCCESS": "#198754",
                 "NOT_APPLICABLE": "#64748b",
-                "UNSUPPORTED": "#eab308",
-                "MISSING_DEPENDENCY": "#eab308",
-                "FAILED": "#ef4444",
-                "CORRUPTED": "#ef4444"
+                "UNSUPPORTED": "#E5A000",
+                "MISSING_DEPENDENCY": "#E5A000",
+                "FAILED": "#DC3545",
+                "CORRUPTED": "#DC3545"
             }
 
             chart_mod = alt.Chart(df_mod).mark_bar(cornerRadiusEnd=4).encode(
                 x=alt.X('Count:Q', title='Module Count',
-                        axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15, tickMinStep=1)),
+                        axis=alt.Axis(labelColor='#465665', titleColor='#203747', labelFontSize=12, titleFontSize=13, labelPadding=7, tickMinStep=1)),
                 y=alt.Y('Status:N', title='Execution Status', sort='-x',
-                        axis=alt.Axis(labelColor='#f1f5f9', titleColor='#cbd5e1', labelFontSize=14, titleFontSize=15)),
+                        axis=alt.Axis(labelColor='#465665', titleColor='#203747', labelFontSize=12, titleFontSize=13, labelPadding=7, labelLimit=240, labelOverlap=False)),
                 color=alt.Color('Status:N', scale=alt.Scale(domain=list(color_map.keys()), range=list(color_map.values())), legend=None),
                 tooltip=['Status', 'Count']
-            ).properties(height=260).configure_view(strokeWidth=0)
+            ).properties(
+                height=300,
+                padding={"left": 8, "right": 12, "top": 8, "bottom": 8}
+            ).configure(
+                background="#FFFFFF"
+            ).configure_axis(
+                labelColor="#465665",
+                titleColor="#203747",
+                gridColor="#E1E8EE",
+                gridOpacity=0.8,
+                domainColor="#BDCAD4",
+                tickColor="#BDCAD4",
+                labelFont="IBM Plex Sans",
+                titleFont="IBM Plex Sans",
+                titlePadding=10
+            ).configure_view(
+                fill="#FFFFFF",
+                stroke="#FFFFFF"
+            )
 
             st.altair_chart(chart_mod, use_container_width=True)
 
@@ -1268,7 +1768,17 @@ elif selected_page == "Findings Table":
 <td style="color:#cbd5e1;">{f.get('evidence', 'Evidence File')}</td>
 </tr>"""
 
-            table_html = f"""<table class="forensic-table">
+            table_html = f"""<div class="findings-table-wrap">
+<table class="forensic-table findings-table">
+<colgroup>
+<col style="width:14%;">
+<col style="width:16%;">
+<col style="width:9%;">
+<col style="width:7%;">
+<col style="width:29%;">
+<col style="width:10%;">
+<col style="width:15%;">
+</colgroup>
 <thead>
 <tr>
 <th>Finding ID</th>
@@ -1283,7 +1793,8 @@ elif selected_page == "Findings Table":
 <tbody>
 {rows_html}
 </tbody>
-</table>"""
+</table>
+</div>"""
             st.markdown(table_html, unsafe_allow_html=True)
         else:
             st.success("✅ Clean Evidence File — No anti-forensic anomaly findings were triggered.")
@@ -1355,14 +1866,14 @@ elif selected_page == "Audit Log":
         for log in audit_logs:
             rows_html += f"""<tr>
 <td class="tech-mono" style="color:#94a3b8; font-size:15px;">{log.get('timestamp')}</td>
-<td style="font-weight:600; color:#60a5fa;">{log.get('action')}</td>
+<td class="audit-action">{log.get('action')}</td>
 <td class="tech-mono">{log.get('case_id')}</td>
 <td class="tech-mono">{log.get('evidence_id')}</td>
 <td>{log.get('investigator')}</td>
 <td style="color:#cbd5e1;">{log.get('details')}</td>
 </tr>"""
 
-        audit_table = f"""<table class="forensic-table">
+        audit_table = f"""<table class="forensic-table audit-log-table">
 <thead>
 <tr>
 <th>Timestamp (UTC)</th>
