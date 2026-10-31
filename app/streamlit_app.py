@@ -1756,12 +1756,14 @@ elif selected_page == "Findings Table":
             for f in findings:
                 sev = f.get("severity", "LOW").upper()
                 badge_cls = "badge-high" if sev == "HIGH" else ("badge-medium" if sev == "MEDIUM" else "badge-low")
+                confidence = f.get("confidence", "Low")
                 pts = f.get("points", "+20" if sev == "HIGH" else ("+15" if sev == "MEDIUM" else "+10"))
                 
                 rows_html += f"""<tr>
 <td class="tech-mono" style="color:#60a5fa; font-weight:700;">{f.get('finding_id', 'AF-00000000')}</td>
 <td style="font-weight:600;">{f.get('type', 'Unknown')}</td>
 <td><span class="badge {badge_cls}">{sev}</span></td>
+<td>{confidence}</td>
 <td class="tech-mono">{pts}</td>
 <td style="line-height:1.4;">{f.get('reason', '')}</td>
 <td style="color:#cbd5e1;">{f.get('source', 'System')}</td>
@@ -1784,6 +1786,7 @@ elif selected_page == "Findings Table":
 <th>Finding ID</th>
 <th>Indicator</th>
 <th>Severity</th>
+<th>Confidence</th>
 <th>Points</th>
 <th>Reason / Observation</th>
 <th>Source</th>
@@ -1969,13 +1972,13 @@ elif selected_page == "Help":
     | Log Cleared (Event ID 1102) | 25 |
     | NTFS Timestamp Discrepancy | 25 |
     | YARA Match (per matched rule) | 25 |
-    | Modified Before Created | 20 |
-    | Accessed Before Created | 20 |
+    | Modified Before Created | 10 |
+    | Accessed Before Created | 5 |
     | Audit Policy Changed (Event ID 4719) | 20 |
-    | Event Log Service Shutdown (Event ID 1100) | 20 |
+    | Event Log Service Shutdown (Event ID 1100) | 10 |
     | Timeline Gap (>30 min) | 15 |
     | Hidden File Attribute | 10 |
-    | Accessed Before Modified | 10 |
+    | Accessed Before Modified | 5 |
 
     > Each distinct indicator category contributes its base weight **once**, regardless of how many times it was observed. All occurrences are preserved for investigator review.
 

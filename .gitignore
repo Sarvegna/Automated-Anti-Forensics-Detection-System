@@ -17,3 +17,6 @@ __pycache__/
 evidence/working/*
 !evidence/working/.gitkeep
 data/*.json
+evidence/input/test_report.html
+evidence/input/test_report.json
+data/

@@ -7,6 +7,28 @@ sys.path.append(project_root)
 from core.reporting import generate_json_report, generate_html_report
 
 
+def test_reports_include_finding_confidence():
+    pipeline_result = {
+        "findings": [{
+            "finding_id": "AF-12345678",
+            "type": "Future Timestamp (Timestamp)",
+            "severity": "HIGH",
+            "confidence": "Medium",
+            "points": 25,
+            "evidence": "evidence.txt",
+            "reason": "Timestamp is in the future.",
+            "source": "Timestamp",
+        }],
+    }
+
+    json_report = generate_json_report(pipeline_result)
+    html_report = generate_html_report(pipeline_result)
+
+    assert '"confidence": "Medium"' in json_report
+    assert "<th>CONFIDENCE</th>" in html_report
+    assert "<td style=\"padding:10px; border-bottom:1px solid #2a2e3a;\">Medium</td>" in html_report
+
+
 def run_tests():
     output_dir = os.path.join(project_root, "evidence", "input")
 
