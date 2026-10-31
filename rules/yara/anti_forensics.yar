@@ -8,7 +8,7 @@ rule AntiForensic_SDelete_Signature {
         $s2 = "Secure Delete" nocase
         $s3 = "cleaning free space" nocase
     condition:
-        any of ($s1, $s2, $s3)
+        2 of them
 }
 
 rule AntiForensic_Timestomp_Indicator {
@@ -21,7 +21,7 @@ rule AntiForensic_Timestomp_Indicator {
         $t2 = "setmtime" nocase
         $t3 = "SetFileTime" nocase
     condition:
-        any of ($t1, $t2, $t3)
+        2 of them
 }
 
 rule AntiForensic_LogCleaner_Reference {
@@ -34,5 +34,5 @@ rule AntiForensic_LogCleaner_Reference {
         $l2 = "Clear-EventLog" nocase
         $l3 = "evtcleaner" nocase
     condition:
-        any of ($l1, $l2, $l3)
+        2 of them
 }

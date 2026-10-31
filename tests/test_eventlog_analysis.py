@@ -69,7 +69,7 @@ class TestEventLogAnalysis(unittest.TestCase):
         self.assertEqual(ind["record_id"], 501)
         self.assertEqual(ind["channel"], "Security")
         self.assertEqual(ind["severity"], "HIGH")
-        self.assertEqual(ind["points"], 20)
+        self.assertEqual(ind["points"], 10)
 
     def test_event_1102_log_cleared(self):
         events = [
@@ -84,6 +84,42 @@ class TestEventLogAnalysis(unittest.TestCase):
         self.assertEqual(ind["record_id"], 601)
         self.assertEqual(ind["severity"], "HIGH")
         self.assertEqual(ind["points"], 25)
+
+    def test_event_104_system_log_cleared(self):
+        events = [
+            {"event_id": 104, "record_id": 602, "channel": "System", "timestamp": self.base_time, "source": "EventLog", "message": "The System log was cleared"},
+        ]
+        result = analyze_event_log(events)
+        self.assertTrue(result["anomaly_detected"])
+        self.assertEqual(len(result["indicators"]), 1)
+        ind = result["indicators"][0]
+        self.assertEqual(ind["type"], "System Log Cleared")
+        self.assertEqual(ind["event_id"], 104)
+        self.assertEqual(ind["channel"], "System")
+        self.assertEqual(ind["severity"], "HIGH")
+        self.assertEqual(ind["points"], 25)
+        self.assertIn("not proof of malicious activity", ind["explanation"])
+        risk = calculate_risk_score(eventlog_result=result)
+        self.assertEqual(risk["score"], 25)
+
+    def test_event_104_and_1102_each_reported(self):
+        events = [
+            {"event_id": 104, "record_id": 602, "channel": "System", "timestamp": self.base_time, "source": "EventLog", "message": "System log cleared"},
+            {"event_id": 1102, "record_id": 603, "channel": "Security", "timestamp": self.base_time + timedelta(minutes=1), "source": "Security", "message": "Security log cleared"},
+        ]
+        result = analyze_event_log(events)
+        self.assertEqual(len(result["indicators"]), 2)
+        self.assertEqual([item["event_id"] for item in result["indicators"]], [104, 1102])
+        risk = calculate_risk_score(eventlog_result=result)
+        self.assertEqual(risk["score"], 50)
+        self.assertEqual(len(risk["contributing_indicators"]), 2)
+
+    def test_no_104_or_1102_no_log_cleared_finding(self):
+        events = [
+            {"event_id": 4624, "record_id": 604, "channel": "System", "timestamp": self.base_time, "source": "Security", "message": "Normal event"},
+        ]
+        result = analyze_event_log(events)
+        self.assertFalse(any("Log Cleared" in item["type"] for item in result["indicators"]))
 
     def test_event_4719_audit_policy_changed(self):
         events = [
@@ -201,7 +237,7 @@ class TestEventLogAnalysis(unittest.TestCase):
         self.assertEqual(sum(ind["type"] == "Timeline Gap" for ind in result["indicators"]), 5)
 
         risk_result = calculate_risk_score(eventlog_result=result)
-        self.assertEqual(risk_result["score"], 35)
+        self.assertEqual(risk_result["score"], 25)
         contributions = {item["type"]: item for item in risk_result["contributing_indicators"]}
         self.assertEqual(contributions["Event Log Service Shutdown (Event Log)"]["occurrences"], 4)
         self.assertEqual(contributions["Timeline Gap (Event Log)"]["occurrences"], 5)

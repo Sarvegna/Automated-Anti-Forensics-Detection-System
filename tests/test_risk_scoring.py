@@ -23,6 +23,7 @@ sys.path.insert(0, project_root)
 
 import pytest
 from core.risk_scoring import calculate_risk_score, INDICATOR_WEIGHTS
+from core.findings import build_findings_from_risk_result
 
 
 # ---------------------------------------------------------------------------
@@ -404,4 +405,36 @@ def test_ntfs_unknown_type_does_not_pollute_known_score():
     ]
     assert len(unknown_ci) == 1
     assert unknown_ci[0]["points"] == 0
+
+
+def test_finding_confidence_levels_preserve_points_score_and_severity():
+    risk_result = calculate_risk_score(eventlog_result={
+        "anomaly_detected": True,
+        "indicators": [
+            {"type": "Log Cleared", "explanation": "Security log cleared."},
+            {"type": "Audit Policy Changed", "explanation": "Policy changed."},
+            {"type": "Timeline Gap", "explanation": "Timeline gap."},
+        ],
+    })
+    findings = build_findings_from_risk_result(risk_result, "evidence.evtx")
+    by_type = {finding["type"].split(" (", 1)[0]: finding for finding in findings}
+
+    assert risk_result["score"] == 60
+    assert by_type["Log Cleared"]["confidence"] == "High"
+    assert by_type["Audit Policy Changed"]["confidence"] == "Medium"
+    assert by_type["Timeline Gap"]["confidence"] == "Low"
+    assert [by_type[name]["points"] for name in ("Log Cleared", "Audit Policy Changed", "Timeline Gap")] == [25, 20, 15]
+    assert [by_type[name]["severity"] for name in ("Log Cleared", "Audit Policy Changed", "Timeline Gap")] == ["HIGH", "HIGH", "MEDIUM"]
+
+
+def test_unknown_finding_type_has_low_confidence():
+    findings = build_findings_from_risk_result({
+        "contributing_indicators": [{
+            "type": "Unexpected Indicator (NTFS)",
+            "points": 0,
+            "explanation": "Unknown indicator.",
+        }],
+    }, "evidence.bin")
+
+    assert findings[0]["confidence"] == "Low"
 

@@ -1,0 +1,3 @@
+Harmless synthetic test file.
+Executing wevtutil cl System command for log clearing test.
+Using sdelete tool for secure file cleanup test.

@@ -103,6 +103,7 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
                 <td style="padding:10px; border-bottom:1px solid #2a2e3a;">
                     <span style="color:{sev_color}; font-weight:bold;">{sev}</span>
                 </td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('confidence', 'Low')}</td>
                 <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('reason')}</td>
                 <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('source')}</td>
             </tr>
@@ -110,7 +111,7 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
     else:
         findings_rows_html = """
         <tr>
-            <td colspan="5" style="padding:16px; text-align:center; color:#8b90a0;">No anti-forensic indicators detected during automated analysis.</td>
+            <td colspan="6" style="padding:16px; text-align:center; color:#8b90a0;">No anti-forensic indicators detected during automated analysis.</td>
         </tr>
         """
 
@@ -201,6 +202,7 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
                     <th>FINDING ID</th>
                     <th>TYPE</th>
                     <th>SEVERITY</th>
+                    <th>CONFIDENCE</th>
                     <th>REASON / OBSERVATION</th>
                     <th>SOURCE</th>
                 </tr>

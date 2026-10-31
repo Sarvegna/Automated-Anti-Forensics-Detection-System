@@ -5,6 +5,7 @@ from core.gap_detection import find_timeline_gaps
 
 # Important Windows Security Event IDs
 LOG_CLEARED_EVENT_ID = 1102
+SYSTEM_LOG_CLEARED_EVENT_ID = 104
 AUDIT_POLICY_CHANGED_EVENT_ID = 4719
 EVENT_LOG_SERVICE_SHUTDOWN_EVENT_ID = 1100
 
@@ -17,8 +18,9 @@ def analyze_event_log(events):
     Analyze Windows Event Log records for potential anti-forensic
     indicators based strictly on actual numeric Event IDs:
       - Event ID 1102: Security audit log cleared (25 pts, HIGH)
+      - Event ID 104: System log cleared (25 pts, HIGH)
       - Event ID 4719: Audit policy changed (20 pts, HIGH)
-      - Event ID 1100: Windows Event Log service shut down (20 pts, HIGH)
+      - Event ID 1100: Windows Event Log service shut down (10 pts, HIGH)
       - Timeline Gaps > 30 minutes (15 pts, MEDIUM)
 
     Other Security events (e.g., 4624, 4672, 4798, 4907, 5379, 5799)
@@ -123,6 +125,28 @@ def analyze_event_log(events):
             })
 
         # -----------------------------------------------------
+        # Event ID 104 - System log cleared
+        # -----------------------------------------------------
+        elif event_id == SYSTEM_LOG_CLEARED_EVENT_ID:
+            indicators.append({
+                "type": "System Log Cleared",
+                "event_id": event_id,
+                "record_id": record_id,
+                "channel": channel,
+                "computer": computer,
+                "timestamp": timestamp,
+                "source": source,
+                "message": message,
+                "event_data": event_data,
+                "severity": "HIGH",
+                "points": 25,
+                "explanation": (
+                    "Windows System log was cleared. This is an indicator "
+                    "requiring investigator review, not proof of malicious activity."
+                )
+            })
+
+        # -----------------------------------------------------
         # Event ID 4719 - Audit policy changed
         # -----------------------------------------------------
         elif event_id == AUDIT_POLICY_CHANGED_EVENT_ID:
@@ -161,7 +185,7 @@ def analyze_event_log(events):
                 "message": message,
                 "event_data": event_data,
                 "severity": "HIGH",
-                "points": 20,
+                "points": 10,
                 "explanation": (
                     "The Windows Event Log service was shut down. "
                     "This may interrupt event collection and can be "

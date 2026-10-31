@@ -1,6 +1,27 @@
 import uuid
 
 
+CONFIDENCE_BY_INDICATOR = {
+    "Log Cleared": "High",
+    "System Log Cleared": "High",
+    "Audit Policy Changed": "Medium",
+    "Future Timestamp": "Medium",
+    "NTFS Timestamp Discrepancy": "Medium",
+    "YARA Match": "Low",
+    "Event Log Service Shutdown": "Low",
+    "Modified Before Created": "Low",
+    "Accessed Before Created": "Low",
+    "Accessed Before Modified": "Low",
+    "Timeline Gap": "Low",
+    "Hidden File": "Low",
+}
+
+
+def confidence_from_type(finding_type):
+    indicator_type = finding_type.split(" (", 1)[0]
+    return CONFIDENCE_BY_INDICATOR.get(indicator_type, "Low")
+
+
 def create_finding(finding_type, severity, evidence_reference, reason, source, points=0):
     """
     Creates a structured, traceable finding record.
@@ -11,6 +32,7 @@ def create_finding(finding_type, severity, evidence_reference, reason, source, p
         "finding_id": finding_id,
         "type": finding_type,
         "severity": severity,
+        "confidence": confidence_from_type(finding_type),
         "points": points,
         "evidence": evidence_reference,
         "reason": reason,

@@ -42,10 +42,10 @@ def test_timestamp_display_unknown_type_fallback_is_zero():
 
 def test_timestamp_display_known_types_resolve_correctly():
     known = {
-        'Modified Before Created': 20,
-        'Accessed Before Created': 20,
+        'Modified Before Created': 10,
+        'Accessed Before Created': 5,
         'Future Timestamp': 25,
-        'Accessed Before Modified': 10,
+        'Accessed Before Modified': 5,
     }
     for ind_type, expected in known.items():
         pts = INDICATOR_WEIGHTS.get(ind_type, 0)
@@ -65,7 +65,7 @@ def test_eventlog_display_known_categories_resolve_correctly():
     known = {
         'Log Cleared': 25,
         'Audit Policy Changed': 20,
-        'Event Log Service Shutdown': 20,
+        'Event Log Service Shutdown': 10,
         'Timeline Gap': 15,
     }
     for cat_name, expected in known.items():
