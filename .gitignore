@@ -19,3 +19,4 @@ evidence/working/*
 data/*.json
 evidence/input/test_report.html
 evidence/input/test_report.json
+data/
