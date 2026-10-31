@@ -1,26 +1,85 @@
 import sys
 import os
+import ctypes
+import shutil
+from datetime import datetime, timezone
+import pytest
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 from core.analysis_router import run_automated_analysis
+from core.evidence_object import create_evidence_object
+from core.timestamp_analysis import analyze_timestamps
 
 
-def test_future_timestamp_pipeline():
+def _set_windows_file_times(file_path):
+    if os.name != "nt":
+        return False
+
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
+    ]
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.SetFileTime.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+    ]
+    kernel32.SetFileTime.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    def to_filetime(value):
+        filetime_epoch = datetime(1601, 1, 1, tzinfo=timezone.utc)
+        ticks = int((value - filetime_epoch).total_seconds()) * 10_000_000
+        return wintypes.FILETIME(ticks & 0xFFFFFFFF, ticks >> 32)
+
+    created = to_filetime(datetime(2035, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+    modified = to_filetime(datetime(2035, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+    accessed = to_filetime(datetime(2035, 1, 2, 12, 0, 0, tzinfo=timezone.utc))
+    handle = kernel32.CreateFileW(file_path, 0x0100, 0x00000007, None, 3, 0x00000080, None)
+    if handle == wintypes.HANDLE(-1).value:
+        return False
+
+    try:
+        return bool(kernel32.SetFileTime(
+            handle, ctypes.byref(created), ctypes.byref(accessed), ctypes.byref(modified)
+        ))
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def test_future_timestamp_pipeline(tmp_path, monkeypatch):
     print("==================================================")
     print("TESTING FUTURE TIMESTAMP LOCAL PATH PIPELINE")
     print("==================================================")
 
-    test_file = os.path.join(project_root, "evidence", "input", "future_timestamp.txt")
+    sample_file = os.path.join(project_root, "evidence", "input", "future_timestamp.txt")
+    test_file = str(tmp_path / "future_timestamp.txt")
+    shutil.copyfile(sample_file, test_file)
     source_metadata = {
         "input_method": "local_path",
         "is_web_upload": False,
         "filename": "future_timestamp.txt"
     }
 
-    res = run_automated_analysis(test_file, source_metadata=source_metadata)
+    evidence_obj = create_evidence_object(test_file, source_metadata=source_metadata)
+
+    def analyze_with_controlled_times(evidence_input, source_metadata=None):
+        if not _set_windows_file_times(test_file):
+            pytest.skip("Cannot set the evidence copy's creation time on this platform.")
+        return analyze_timestamps(evidence_input, source_metadata=source_metadata)
+
+    monkeypatch.setattr("core.analysis_router.analyze_timestamps", analyze_with_controlled_times)
+
+    res = run_automated_analysis(evidence_obj, source_metadata=source_metadata)
 
     # 1. Timestamp Analysis = SUCCESS
     assert res["module_statuses"].get("Timestamp Analysis") == "SUCCESS"
