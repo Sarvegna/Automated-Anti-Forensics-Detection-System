@@ -123,14 +123,12 @@ def calculate_risk_score(
       HIGH   : 60 – 100
     """
     contributing_indicators = []
-    total_score = 0
 
     # 1. Timestamp Analysis Indicators
     if timestamp_result and timestamp_result.get("anomaly_detected"):
         pts, entries = _score_indicator_group(
             timestamp_result.get("indicators", []), "(Timestamp)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 2. Event Log Analysis Indicators
@@ -138,7 +136,6 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             eventlog_result.get("indicators", []), "(Event Log)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 3. Browser Artifact Analysis Indicators
@@ -146,13 +143,11 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             browser_result.get("indicators", []), "(Browser)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 4. Hidden File Check Indicator
     if hidden_file_result and hidden_file_result.get("anomaly_detected"):
         points = INDICATOR_WEIGHTS.get("Hidden File", 0)
-        total_score += points
         contributing_indicators.append({
             "type": "Hidden File",
             "points": points,
@@ -166,7 +161,6 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             ntfs_result.get("indicators", []), "(NTFS)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 6. YARA Cross-Artifact Analysis
@@ -217,7 +211,6 @@ def calculate_risk_score(
                     rule_name = rule_type[len("YARA Match ("):-1]
 
                 points = _yara_weight_for_rule(rule_name)
-                total_score += points
                 exp = occ_list[0].get("reason", "")
                 if len(occ_list) > 1:
                     exp = f"{exp} ({len(occ_list)} occurrences detected)"
@@ -228,6 +221,9 @@ def calculate_risk_score(
                     "occurrences": len(occ_list),
                     "explanation": exp
                 })
+
+    # Findings are assembled above; calculate the score from their points.
+    total_score = sum(indicator["points"] for indicator in contributing_indicators)
 
     # Hard bounding: 0 <= score <= 100
     bounded_score = max(0, min(total_score, MAX_SCORE))

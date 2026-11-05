@@ -438,3 +438,38 @@ def test_unknown_finding_type_has_low_confidence():
 
     assert findings[0]["confidence"] == "Low"
 
+
+def test_score_equals_capped_sum_of_finding_points():
+    risk_result = calculate_risk_score(
+        timestamp_result=_timestamp("Future Timestamp", "Modified Before Created"),
+        eventlog_result=_eventlog("Log Cleared", "Audit Policy Changed"),
+        hidden_file_result={"anomaly_detected": True, "explanation": "h"},
+    )
+    findings = build_findings_from_risk_result(risk_result, "evidence.bin")
+    assert risk_result["score"] == min(sum(f["points"] for f in findings), 100)
+
+
+def test_repeated_indicator_finding_is_counted_once():
+    result = calculate_risk_score(eventlog_result={
+        "anomaly_detected": True,
+        "indicators": [
+            {"type": "Log Cleared", "explanation": "first"},
+            {"type": "Log Cleared", "explanation": "second"},
+        ],
+    })
+    findings = build_findings_from_risk_result(result, "evidence.evtx")
+    assert result["score"] == 25
+    assert len(findings) == 1
+    assert result["contributing_indicators"][0]["occurrences"] == 2
+
+
+@pytest.mark.parametrize("inputs, expected_score, expected_level", [
+    ({}, 0, "LOW"),
+    ({"hidden_file_result": {"anomaly_detected": True, "explanation": "h"}}, 10, "LOW"),
+    ({"eventlog_result": _eventlog("Log Cleared", "Timeline Gap")}, 40, "MEDIUM"),
+    ({"eventlog_result": _eventlog("Log Cleared", "Audit Policy Changed"), "hidden_file_result": {"anomaly_detected": True, "explanation": "h"}}, 55, "MEDIUM"),
+])
+def test_fixed_indicator_sets_keep_baseline_values(inputs, expected_score, expected_level):
+    result = calculate_risk_score(**inputs)
+    assert (result["score"], result["risk_level"]) == (expected_score, expected_level)
+
