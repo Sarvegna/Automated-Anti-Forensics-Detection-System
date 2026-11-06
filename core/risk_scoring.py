@@ -1,3 +1,5 @@
+from core.findings import build_findings_from_risk_result
+
 INDICATOR_WEIGHTS = {
     "Modified Before Created": 10,
     "Accessed Before Created": 5,
@@ -240,5 +242,8 @@ def calculate_risk_score(
     return {
         "score": bounded_score,
         "risk_level": risk_level,
-        "contributing_indicators": contributing_indicators
+        "contributing_indicators": contributing_indicators,
+        "findings": build_findings_from_risk_result(
+            {"contributing_indicators": contributing_indicators}, None
+        )
     }

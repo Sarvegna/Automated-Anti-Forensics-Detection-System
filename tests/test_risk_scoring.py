@@ -473,3 +473,27 @@ def test_fixed_indicator_sets_keep_baseline_values(inputs, expected_score, expec
     result = calculate_risk_score(**inputs)
     assert (result["score"], result["risk_level"]) == (expected_score, expected_level)
 
+
+@pytest.mark.parametrize("inputs", [
+    {"eventlog_result": _eventlog("Log Cleared", "Timeline Gap")},
+    {"eventlog_result": _eventlog("Log Cleared", "Log Cleared")},
+    {"hidden_file_result": {"anomaly_detected": True, "explanation": "h"}},
+    {"yara_result": _yara_success(["AntiForensic_SDelete_Signature"])},
+    {"ntfs_result": {"anomaly_detected": True, "indicators": [{"type": "NTFS Unknown Future Type", "explanation": "unknown"}]}},
+])
+def test_returned_findings_match_router_builder(inputs):
+    result = calculate_risk_score(**inputs)
+    router_findings = build_findings_from_risk_result(result, None)
+
+    def comparable(findings):
+        return [
+            (finding["type"], finding["points"], finding["severity"], finding["confidence"])
+            for finding in findings
+        ]
+
+    assert comparable(result["findings"]) == comparable(router_findings)
+    assert len(result["findings"]) == len(router_findings)
+    assert len(result["findings"]) == len(result["contributing_indicators"])
+    if inputs.get("eventlog_result") and len(inputs["eventlog_result"]["indicators"]) == 2 and inputs["eventlog_result"]["indicators"][0].get("type") == inputs["eventlog_result"]["indicators"][1].get("type"):
+        assert result["contributing_indicators"][0]["occurrences"] == 2
+
