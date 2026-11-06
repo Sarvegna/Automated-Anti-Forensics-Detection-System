@@ -184,7 +184,7 @@ def analyze_event_log(events):
                 "source": source,
                 "message": message,
                 "event_data": event_data,
-                "severity": "HIGH",
+                "severity": "LOW",
                 "points": 10,
                 "explanation": (
                     "The Windows Event Log service was shut down. "
