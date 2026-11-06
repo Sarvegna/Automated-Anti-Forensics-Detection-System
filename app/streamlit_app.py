@@ -348,7 +348,7 @@ st.markdown("""
 
     .forensic-table.findings-table {
         width: 100%;
-        min-width: 1080px;
+        min-width: 100%;
         margin: 0;
         table-layout: fixed;
         overflow: visible;
@@ -1779,13 +1779,14 @@ elif selected_page == "Findings Table":
             table_html = f"""<div class="findings-table-wrap">
 <table class="forensic-table findings-table">
 <colgroup>
-<col style="width:14%;">
-<col style="width:16%;">
-<col style="width:9%;">
-<col style="width:7%;">
-<col style="width:29%;">
 <col style="width:10%;">
-<col style="width:15%;">
+<col style="width:14%;">
+<col style="width:8%;">
+<col style="width:9%;">
+<col style="width:6%;">
+<col style="width:33%;">
+<col style="width:10%;">
+<col style="width:10%;">
 </colgroup>
 <thead>
 <tr>
