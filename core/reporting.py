@@ -1,6 +1,11 @@
 import json
 import os
+import html
 from datetime import datetime
+
+
+def escape_html(value):
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 def generate_json_report(pipeline_result, case_info=None, output_path=None):
@@ -51,7 +56,7 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
     if case_info is None:
         case_info = {}
 
-    case_id = case_info.get("case_id", "CASE-UNKNOWN")
+    case_id = escape_html(case_info.get("case_id", "CASE-UNKNOWN"))
     evidence_id = case_info.get("evidence_id", "EVID-UNKNOWN")
     analyst = case_info.get("analyst", "Investigator")
     gen_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -83,9 +88,9 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
         color = status_badge_colors.get(st_val, "#ffffff")
         status_rows_html += f"""
         <tr>
-            <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{mod}</td>
+            <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{escape_html(mod)}</td>
             <td style="padding:10px; border-bottom:1px solid #2a2e3a;">
-                <span style="background:{color}22; color:{color}; border:1px solid {color}; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">{st_val}</span>
+                <span style="background:{color}22; color:{color}; border:1px solid {color}; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">{escape_html(st_val)}</span>
             </td>
         </tr>
         """
@@ -98,14 +103,14 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
             sev_color = "#ff6b5c" if sev == "HIGH" else ("#f39c12" if sev == "MEDIUM" else "#3ddc97")
             findings_rows_html += f"""
             <tr>
-                <td style="padding:10px; border-bottom:1px solid #2a2e3a; font-family:monospace;">{f.get('finding_id')}</td>
-                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('type')}</td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a; font-family:monospace;">{escape_html(f.get('finding_id'))}</td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{escape_html(f.get('type'))}</td>
                 <td style="padding:10px; border-bottom:1px solid #2a2e3a;">
-                    <span style="color:{sev_color}; font-weight:bold;">{sev}</span>
+                    <span style="color:{sev_color}; font-weight:bold;">{escape_html(sev)}</span>
                 </td>
-                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('confidence', 'Low')}</td>
-                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('reason')}</td>
-                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{f.get('source')}</td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{escape_html(f.get('confidence', 'Low'))}</td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{escape_html(f.get('reason'))}</td>
+                <td style="padding:10px; border-bottom:1px solid #2a2e3a;">{escape_html(f.get('source'))}</td>
             </tr>
             """
     else:
@@ -154,23 +159,23 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
             </div>
             <div class="card">
                 <div class="card-label">EVIDENCE ID</div>
-                <div class="card-value">{evidence_id}</div>
+                <div class="card-value">{escape_html(evidence_id)}</div>
             </div>
             <div class="card">
                 <div class="card-label">ANALYST</div>
-                <div class="card-value">{analyst}</div>
+                <div class="card-value">{escape_html(analyst)}</div>
             </div>
             <div class="card">
                 <div class="card-label">EVIDENCE FILE</div>
-                <div class="card-value">{evidence_ref}</div>
+                <div class="card-value">{escape_html(evidence_ref)}</div>
             </div>
             <div class="card">
                 <div class="card-label">IDENTIFIED ARTIFACT</div>
-                <div class="card-value">{artifact_type}</div>
+                <div class="card-value">{escape_html(artifact_type)}</div>
             </div>
             <div class="card">
                 <div class="card-label">SHA-256 INTEGRITY</div>
-                <div class="card-value" style="font-size:11px; font-family:monospace;">{sha256}</div>
+                <div class="card-value" style="font-size:11px; font-family:monospace;">{escape_html(sha256)}</div>
             </div>
         </div>
 
