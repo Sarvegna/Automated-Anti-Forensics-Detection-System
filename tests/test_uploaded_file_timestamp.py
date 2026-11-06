@@ -24,6 +24,8 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+from core.timestamp_analysis import analyze_timestamps, timestamp_consistency_message
+
 
 def convert_last_modified(last_modified_ms):
     from datetime import datetime, timezone
@@ -127,6 +129,42 @@ def test_streamlit_app_imports_timezone():
     assert "from datetime import datetime, timezone" in source, (
         "streamlit_app.py must import timezone alongside datetime."
     )
+
+
+def test_upload_with_modified_time_shows_limited_check_message(tmp_path):
+    upload_path = tmp_path / "upload.bin"
+    upload_path.write_bytes(b"evidence")
+    timestamp_result = analyze_timestamps(str(upload_path), source_metadata={
+        "is_web_upload": True,
+        "last_modified": datetime(2020, 1, 1, tzinfo=timezone.utc),
+    })
+
+    assert timestamp_result["modified"] == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert timestamp_result["indicators"] == []
+    assert timestamp_consistency_message(timestamp_result) == (
+        "Only the modified time was available for this uploaded file, so created and accessed times were "
+        "not checked. Use local path mode for the full timestamp checks."
+    )
+
+
+def test_upload_without_last_modified_has_no_modified_time_or_checks(tmp_path):
+    timestamp_result = analyze_timestamps(str(tmp_path / "missing.bin"), source_metadata={
+        "is_web_upload": True,
+    })
+
+    assert timestamp_result["modified"] is None
+    assert timestamp_result["indicators"] == []
+    assert timestamp_consistency_message(timestamp_result) == (
+        "No file timestamps were available for this uploaded file, so timestamp rules were not checked. "
+        "Use local path mode for the full timestamp checks."
+    )
+
+
+def test_local_file_keeps_chronologically_consistent_message():
+    assert timestamp_consistency_message({
+        "timestamp_provenance": {"category": "local_filesystem"},
+        "modified": datetime(2020, 1, 1, tzinfo=timezone.utc),
+    }) == "Timestamps appear chronologically consistent."
 
 
 if __name__ == "__main__":

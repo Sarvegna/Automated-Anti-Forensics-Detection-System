@@ -15,6 +15,7 @@ from core.analysis_router import run_automated_analysis
 from core.reporting import generate_json_report, generate_html_report
 from core.risk_scoring import INDICATOR_WEIGHTS
 from core.findings import severity_from_points
+from core.timestamp_analysis import timestamp_consistency_message
 from core.storage import (
     save_investigation_history,
     get_investigation_history,
@@ -1423,7 +1424,12 @@ elif selected_page == "Module Results":
                     )
                     st.metric("Created Timestamp", _created_display)
                 with col_t2:
-                    st.metric("Modified Timestamp", str(m_data.get("modified", "N/A")))
+                    _modified_val = m_data.get("modified")
+                    _modified_display = (
+                        _BROWSER_NA_LABEL if (_mod_is_browser and _modified_val is None)
+                        else str(_modified_val if _modified_val is not None else "N/A")
+                    )
+                    st.metric("Modified Timestamp", _modified_display)
                 with col_t3:
                     _accessed_val = m_data.get("accessed")
                     _accessed_display = (
@@ -1459,7 +1465,7 @@ elif selected_page == "Module Results":
                         </div>
                         """, unsafe_allow_html=True)
                 else:
-                    st.success("✅ Timestamps appear chronologically consistent.")
+                    st.success(timestamp_consistency_message(m_data))
 
         elif mod_tab_choice == "Hidden File Check":
             st.markdown("""

@@ -10,6 +10,20 @@ TOLERANCE_SECONDS = 2.0
 logger = logging.getLogger(__name__)
 
 
+def timestamp_consistency_message(timestamp_result):
+    if timestamp_result.get("timestamp_provenance", {}).get("category") == "browser_upload":
+        if timestamp_result.get("modified") is None:
+            return (
+                "No file timestamps were available for this uploaded file, so timestamp rules were not checked. "
+                "Use local path mode for the full timestamp checks."
+            )
+        return (
+            "Only the modified time was available for this uploaded file, so created and accessed times were "
+            "not checked. Use local path mode for the full timestamp checks."
+        )
+    return "Timestamps appear chronologically consistent."
+
+
 def analyze_timestamps(evidence_input, source_metadata=None):
     """
     Reads a file's Created, Modified, and Accessed timestamps (in UTC),
@@ -41,7 +55,7 @@ def analyze_timestamps(evidence_input, source_metadata=None):
         created_raw = None
         created_dt = None
 
-        # Modified time: Use browser last_modified if provided in source_metadata, else read file mtime
+        # Modified time: Use browser last_modified if provided in source_metadata.
         if source_metadata and source_metadata.get("last_modified"):
             modified_dt = source_metadata["last_modified"]
             if isinstance(modified_dt, (int, float)):
@@ -52,11 +66,11 @@ def analyze_timestamps(evidence_input, source_metadata=None):
                     modified_dt = modified_dt.replace(tzinfo=timezone.utc)
                 modified_raw = modified_dt.timestamp()
             else:
-                modified_raw = os.path.getmtime(file_path)
-                modified_dt = datetime.fromtimestamp(modified_raw, tz=timezone.utc)
+                modified_raw = None
+                modified_dt = None
         else:
-            modified_raw = os.path.getmtime(file_path)
-            modified_dt = datetime.fromtimestamp(modified_raw, tz=timezone.utc)
+            modified_raw = None
+            modified_dt = None
 
         accessed_raw = None
         accessed_dt = None
