@@ -13,7 +13,6 @@ from core.memory_analysis import analyze_memory_image
 from core.ntfs_analysis import analyze_ntfs_image
 from core.yara_analysis import analyze_with_yara
 from core.risk_scoring import calculate_risk_score
-from core.findings import build_findings_from_risk_result
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +260,10 @@ def run_automated_analysis(evidence_input, evidence_reference=None, source_metad
     )
 
     # Generate structured findings from risk scoring result
-    risk_findings = build_findings_from_risk_result(risk_result, evidence_reference)
+    risk_findings = [
+        dict(finding, evidence=evidence_reference)
+        for finding in risk_result["findings"]
+    ]
 
     # Deduplicate findings by finding_id / type
     existing_types = {f["type"] for f in all_findings}
