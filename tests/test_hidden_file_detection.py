@@ -1,33 +1,37 @@
-import sys
-import os
-import subprocess
+from types import SimpleNamespace
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(project_root)
+from core import hidden_file_detection
 
-from core.hidden_file_detection import check_hidden_file
 
-# Test Case 1: Normal, visible file (our existing synthetic evidence)
-normal_file = os.path.join(project_root, "evidence", "input", "sample_evidence.txt")
-result = check_hidden_file(normal_file)
-print("Test 1 - Normal (visible) file:")
-print("  Is hidden:", result["is_hidden"])
-print("  Explanation:", result["explanation"])
-print()
+def test_normal_file_without_windows_attributes_is_not_hidden(tmp_path, monkeypatch):
+    file_path = tmp_path / "normal.txt"
+    file_path.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(hidden_file_detection.os, "stat", lambda _: SimpleNamespace())
 
-# Test Case 2: Create a file, then set its Hidden attribute using Windows' attrib command
-hidden_file = os.path.join(project_root, "evidence", "input", "hidden_test.txt")
-if os.path.exists(hidden_file):
-    subprocess.run(["attrib", "-H", hidden_file], check=False)
-    os.remove(hidden_file)
+    result = hidden_file_detection.check_hidden_file(str(file_path))
 
-with open(hidden_file, "w") as f:
-    f.write("Synthetic file for hidden-attribute testing.")
+    assert result["is_hidden"] is False
 
-# Use Windows' built-in attrib command to set the Hidden flag
-subprocess.run(["attrib", "+H", hidden_file], check=True)
 
-result = check_hidden_file(hidden_file)
-print("Test 2 - File with Hidden attribute set:")
-print("  Is hidden:", result["is_hidden"])
-print("  Explanation:", result["explanation"])
+def test_dotfile_without_windows_attributes_is_hidden(tmp_path, monkeypatch):
+    file_path = tmp_path / ".secret"
+    file_path.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(hidden_file_detection.os, "stat", lambda _: SimpleNamespace())
+
+    result = hidden_file_detection.check_hidden_file(str(file_path))
+
+    assert result["is_hidden"] is True
+
+
+def test_windows_hidden_attribute_still_marks_file_hidden(tmp_path, monkeypatch):
+    file_path = tmp_path / "windows-hidden.txt"
+    file_path.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(
+        hidden_file_detection.os,
+        "stat",
+        lambda _: SimpleNamespace(st_file_attributes=0x2),
+    )
+
+    result = hidden_file_detection.check_hidden_file(str(file_path))
+
+    assert result["is_hidden"] is True
