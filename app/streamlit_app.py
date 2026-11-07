@@ -25,6 +25,16 @@ from core.storage import (
     get_audit_logs
 )
 
+
+def _hosted_mode_enabled():
+    if os.environ.get("HOSTED_MODE", "").lower() == "true":
+        return True
+    try:
+        return str(st.secrets.get("HOSTED_MODE", "")).lower() == "true"
+    except Exception:
+        return False
+
+
 # -----------------------------------------------------------------------------
 # PAGE CONFIGURATION
 # -----------------------------------------------------------------------------
@@ -33,6 +43,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+hosted_mode = _hosted_mode_enabled()
+if hosted_mode:
+    st.info("Demo site. Upload only sample or test files, never real evidence. History and audit pages are shared by all visitors.")
 
 # -----------------------------------------------------------------------------
 # DESIGN SYSTEM: TYPOGRAPHY (IBM Plex Sans & Mono) + DARK CHARCOAL STYLING
@@ -801,7 +815,7 @@ if selected_page == "Investigation":
     if is_investigator_provided:
         input_method_choice = st.radio(
             "Evidence Input Method",
-            ["Browser Upload", "Local Evidence Path"],
+            ["Browser Upload"] if hosted_mode else ["Browser Upload", "Local Evidence Path"],
             key="evidence_input_method_radio"
         )
     else:
