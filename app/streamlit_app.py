@@ -12,9 +12,11 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from core.analysis_router import run_automated_analysis
+from core.browser_upload import run_browser_upload_analysis
 from core.reporting import generate_json_report, generate_html_report
 from core.risk_scoring import INDICATOR_WEIGHTS
 from core.findings import severity_from_points
+from core.timestamp_analysis import timestamp_consistency_message
 from core.storage import (
     save_investigation_history,
     get_investigation_history,
@@ -22,6 +24,16 @@ from core.storage import (
     add_audit_log_entry,
     get_audit_logs
 )
+
+
+def _hosted_mode_enabled():
+    if os.environ.get("HOSTED_MODE", "").lower() == "true":
+        return True
+    try:
+        return str(st.secrets.get("HOSTED_MODE", "")).lower() == "true"
+    except Exception:
+        return False
+
 
 # -----------------------------------------------------------------------------
 # PAGE CONFIGURATION
@@ -31,6 +43,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+hosted_mode = _hosted_mode_enabled()
+if hosted_mode:
+    st.info("Demo site. Upload only sample or test files, never real evidence. History and audit pages are shared by all visitors.")
 
 # -----------------------------------------------------------------------------
 # DESIGN SYSTEM: TYPOGRAPHY (IBM Plex Sans & Mono) + DARK CHARCOAL STYLING
@@ -347,7 +363,7 @@ st.markdown("""
 
     .forensic-table.findings-table {
         width: 100%;
-        min-width: 1080px;
+        min-width: 100%;
         margin: 0;
         table-layout: fixed;
         overflow: visible;
@@ -799,7 +815,7 @@ if selected_page == "Investigation":
     if is_investigator_provided:
         input_method_choice = st.radio(
             "Evidence Input Method",
-            ["Browser Upload", "Local Evidence Path"],
+            ["Browser Upload"] if hosted_mode else ["Browser Upload", "Local Evidence Path"],
             key="evidence_input_method_radio"
         )
     else:
@@ -846,11 +862,19 @@ if selected_page == "Investigation":
                                 details=f"Uploaded {uploaded_file.name} ({len(file_bytes)} bytes) via Browser Upload"
                             )
 
-                            pipeline_result = run_automated_analysis(
-                                temp_path,
-                                evidence_reference=uploaded_file.name,
-                                source_metadata=source_metadata
-                            )
+                            try:
+                                pipeline_result = run_browser_upload_analysis(
+                                    run_automated_analysis,
+                                    st.session_state.case_id,
+                                    st.session_state.evidence_id,
+                                    st.session_state.investigator_name,
+                                    temp_path,
+                                    evidence_reference=uploaded_file.name,
+                                    source_metadata=source_metadata
+                                )
+                            except Exception as error:
+                                st.error(f"Analysis Failed: {type(error).__name__}: {error}")
+                                st.stop()
 
                             analysis_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
 
@@ -1059,6 +1083,8 @@ if selected_page == "Investigation":
         source_label = "Forensic Image" if source_type_val == "forensic_image" else "Individual Evidence File"
         input_method_val = result.get("evidence_context", {}).get("input_method") or result.get("input_method", "browser_upload")
         input_method_label = "Local Evidence Path" if input_method_val in ("local_path", "Local Evidence Path") else "Browser Upload"
+        evidence_path_label = "Evidence File Path" if input_method_label == "Local Evidence Path" else "Uploaded file name"
+        evidence_path_value = result.get("file_path") if input_method_label == "Local Evidence Path" else meta.get("filename", result.get("evidence_reference"))
         ts_prov_val = result.get("evidence_context", {}).get("timestamp_provenance") or result.get("timestamp_result", {}).get("timestamp_provenance", {}).get("category", "local_filesystem")
 
         st.markdown(f"""
@@ -1083,8 +1109,8 @@ if selected_page == "Investigation":
                     <td style="color:#38bdf8; font-weight:600;">{ident.get('evidence_type', 'Unknown')}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight:600; color:#cbd5e1;">Evidence File Path:</td>
-                    <td colspan="3" class="tech-mono" style="color:#ffffff; word-break:break-all;">{result.get('file_path')}</td>
+                    <td style="font-weight:600; color:#cbd5e1;">{evidence_path_label}:</td>
+                    <td colspan="3" class="tech-mono" style="color:#ffffff; word-break:break-all;">{evidence_path_value}</td>
                 </tr>
                 <tr>
                     <td style="font-weight:600; color:#cbd5e1;">SHA-256:</td>
@@ -1423,7 +1449,12 @@ elif selected_page == "Module Results":
                     )
                     st.metric("Created Timestamp", _created_display)
                 with col_t2:
-                    st.metric("Modified Timestamp", str(m_data.get("modified", "N/A")))
+                    _modified_val = m_data.get("modified")
+                    _modified_display = (
+                        _BROWSER_NA_LABEL if (_mod_is_browser and _modified_val is None)
+                        else str(_modified_val if _modified_val is not None else "N/A")
+                    )
+                    st.metric("Modified Timestamp", _modified_display)
                 with col_t3:
                     _accessed_val = m_data.get("accessed")
                     _accessed_display = (
@@ -1439,6 +1470,7 @@ elif selected_page == "Module Results":
                         ind_exp = ind.get("explanation", "N/A")
                         pts = INDICATOR_WEIGHTS.get(ind_type, 0)
                         sev = severity_from_points(pts)
+                        sev_badge = "badge-high" if sev == "HIGH" else ("badge-medium" if sev == "MEDIUM" else "badge-low")
 
                         st.markdown(f"""
                         <div class="dark-panel" style="border-left: 4px solid #ef4444; margin-top: 15px; margin-bottom: 15px;">
@@ -1449,7 +1481,7 @@ elif selected_page == "Module Results":
                             <div style="display: flex; gap: 24px; align-items: center;">
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">SEVERITY:</span>
-                                    <span class="badge badge-high" style="margin-left: 6px;">{sev}</span>
+                                    <span class="badge {sev_badge}" style="margin-left: 6px;">{sev}</span>
                                 </div>
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">POINTS:</span>
@@ -1459,7 +1491,7 @@ elif selected_page == "Module Results":
                         </div>
                         """, unsafe_allow_html=True)
                 else:
-                    st.success("✅ Timestamps appear chronologically consistent.")
+                    st.success(timestamp_consistency_message(m_data))
 
         elif mod_tab_choice == "Hidden File Check":
             st.markdown("""
@@ -1533,10 +1565,10 @@ elif selected_page == "Module Results":
 
                 gaps = b_info.get("gap_indicators", [])
                 if gaps:
-                    st.warning(f"⚠️ Detected {len(gaps)} potential anti-forensic activity gap(s) in browser database.")
+                    st.warning("Long gap in recorded activity. This can be ordinary inactivity. Requires investigator review.")
                     for g in gaps:
                         g_type = g.get("type", "Timeline Gap")
-                        g_exp = g.get("explanation", "Potential anti-forensic activity gap detected.")
+                        g_exp = g.get("explanation", "Long gap in recorded activity. This can be ordinary inactivity. Requires investigator review.")
                         st.markdown(f"""
                         <div class="dark-panel" style="border-left: 4px solid #eab308; margin-top: 15px; margin-bottom: 15px;">
                             <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">FINDING</div>
@@ -1697,6 +1729,8 @@ elif selected_page == "Module Results":
             elif m_data:
                 discrepancies = m_data.get("discrepancies", [])
                 records_scanned = m_data.get("records_scanned", 0)
+                if m_data.get("scan_truncated"):
+                    st.warning(m_data.get("scan_note", ""))
                 col_n1, col_n2 = st.columns(2)
                 with col_n1:
                     st.metric("MFT Records Scanned", records_scanned)
@@ -1773,13 +1807,14 @@ elif selected_page == "Findings Table":
             table_html = f"""<div class="findings-table-wrap">
 <table class="forensic-table findings-table">
 <colgroup>
-<col style="width:14%;">
-<col style="width:16%;">
-<col style="width:9%;">
-<col style="width:7%;">
-<col style="width:29%;">
 <col style="width:10%;">
-<col style="width:15%;">
+<col style="width:14%;">
+<col style="width:8%;">
+<col style="width:9%;">
+<col style="width:6%;">
+<col style="width:33%;">
+<col style="width:10%;">
+<col style="width:10%;">
 </colgroup>
 <thead>
 <tr>
@@ -1879,7 +1914,7 @@ elif selected_page == "Audit Log":
         audit_table = f"""<table class="forensic-table audit-log-table">
 <thead>
 <tr>
-<th>Timestamp (UTC)</th>
+<th>Timestamp (UTC / IST)</th>
 <th>Action</th>
 <th>Case ID</th>
 <th>Evidence ID</th>

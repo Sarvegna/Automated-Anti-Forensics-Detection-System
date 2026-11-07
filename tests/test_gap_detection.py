@@ -23,6 +23,10 @@ class TestFindTimelineGaps(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["type"], "Timeline Gap")
         self.assertEqual(result[0]["gap_minutes"], 45)
+        self.assertEqual(
+            result[0]["explanation"],
+            "Long gap in recorded activity. This can be ordinary inactivity. Requires investigator review.",
+        )
 
     def test_does_not_detect_gap_below_threshold(self):
         events = [

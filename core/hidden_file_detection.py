@@ -22,7 +22,11 @@ def check_hidden_file(evidence_input):
 
     # On Windows, st_file_attributes contains attribute flags.
     # FILE_ATTRIBUTE_HIDDEN = 0x2 (bit flag for "hidden")
-    is_hidden = bool(file_stat.st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN)
+    file_attributes = getattr(file_stat, "st_file_attributes", 0)
+    hidden_attribute = getattr(stat, "FILE_ATTRIBUTE_HIDDEN", 0x2)
+    is_hidden = bool(file_attributes & hidden_attribute)
+    if not hasattr(file_stat, "st_file_attributes"):
+        is_hidden = os.path.basename(file_path).startswith(".")
 
     if is_hidden:
         explanation = (

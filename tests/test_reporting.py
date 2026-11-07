@@ -1,10 +1,12 @@
 import sys
 import os
+import html
+import json
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
-from core.reporting import generate_json_report, generate_html_report
+from core.reporting import generate_json_report, generate_html_report, escape_html
 
 
 def test_reports_include_finding_confidence():
@@ -25,8 +27,80 @@ def test_reports_include_finding_confidence():
     html_report = generate_html_report(pipeline_result)
 
     assert '"confidence": "Medium"' in json_report
+    assert "<h1>Automated Anti-Forensics Analysis Report</h1>" in html_report
+    assert "Automated indicators that require investigator review. Not a validated forensic conclusion." in html_report
     assert "<th>CONFIDENCE</th>" in html_report
     assert "<td style=\"padding:10px; border-bottom:1px solid #2a2e3a;\">Medium</td>" in html_report
+
+
+def test_html_report_escapes_evidence_and_user_values(tmp_path):
+    script_text = "<script>alert(1)</script>"
+    image_text = '\"><img src=x onerror=alert(1)>'
+    pipeline_result = {
+        "evidence_reference": f"sample-{script_text}.txt",
+        "file_path": f"C:/synthetic/{image_text}",
+        "identification": {"evidence_type": "Text File"},
+        "module_statuses": {"Synthetic Module": script_text},
+        "findings": [{
+            "finding_id": "AF-12345678",
+            "type": script_text,
+            "severity": "LOW",
+            "confidence": "Low",
+            "points": 10,
+            "reason": script_text,
+            "source": image_text,
+            "evidence": f"NTFS path {image_text}",
+        }],
+    }
+    case_info = {
+        "case_id": script_text,
+        "evidence_id": image_text,
+        "analyst": script_text,
+    }
+
+    html_path = tmp_path / "report.html"
+    html_report = generate_html_report(pipeline_result, case_info, output_path=html_path)
+
+    assert html_path.exists()
+    assert html.escape(script_text, quote=True) in html_report
+    assert html.escape(image_text, quote=True) in html_report
+    assert "<script>alert(1)</script>" not in html_report
+    assert "<img src=x onerror=alert(1)>" not in html_report
+
+
+def test_html_report_normal_text_and_json_report_remain_unescaped(tmp_path):
+    pipeline_result = {
+        "evidence_reference": "report & results.txt",
+        "file_path": "C:/synthetic/report & results.txt",
+        "identification": {"evidence_type": "Text File"},
+        "findings": [{
+            "finding_id": "AF-12345678",
+            "type": "Synthetic Finding",
+            "severity": "LOW",
+            "confidence": "Low",
+            "points": 10,
+            "reason": "report & results",
+            "source": "Synthetic Module",
+            "evidence": "report & results.txt",
+        }],
+    }
+    case_info = {
+        "case_id": "report & results",
+        "evidence_id": "EVID-1",
+        "analyst": "Investigator & reviewer",
+    }
+
+    html_report = generate_html_report(pipeline_result, case_info, output_path=tmp_path / "report.html")
+    json_report = generate_json_report(pipeline_result, case_info, output_path=tmp_path / "report.json")
+    json_data = json.loads(json_report)
+
+    assert "report &amp; results" in html_report
+    assert "report &amp;amp; results" not in html_report
+    assert json_data["report_metadata"]["case_id"] == "report & results"
+    assert json_data["report_metadata"]["analyst"] == "Investigator & reviewer"
+    assert json_data["evidence_summary"]["evidence_reference"] == "report & results.txt"
+    assert json_data["findings"][0]["reason"] == "report & results"
+    assert escape_html(None) == ""
 
 
 def run_tests():

@@ -89,10 +89,8 @@ def find_timeline_gaps(events, threshold_minutes, timestamp_key="timestamp"):
                 "from_event_id": current_event.get("event_id"),
                 "to_event_id": next_event.get("event_id"),
                 "explanation": (
-                    f"Potential timeline anomaly: a gap of "
-                    f"{gap_minutes:.1f} minutes was found between "
-                    f"consecutive entries. This may indicate missing "
-                    f"or unavailable activity. Requires investigator review."
+                    "Long gap in recorded activity. This can be ordinary "
+                    "inactivity. Requires investigator review."
                 )
             }
 

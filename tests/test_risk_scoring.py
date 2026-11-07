@@ -438,3 +438,128 @@ def test_unknown_finding_type_has_low_confidence():
 
     assert findings[0]["confidence"] == "Low"
 
+
+def test_score_equals_capped_sum_of_finding_points():
+    risk_result = calculate_risk_score(
+        timestamp_result=_timestamp("Future Timestamp", "Modified Before Created"),
+        eventlog_result=_eventlog("Log Cleared", "Audit Policy Changed"),
+        hidden_file_result={"anomaly_detected": True, "explanation": "h"},
+    )
+    findings = build_findings_from_risk_result(risk_result, "evidence.bin")
+    assert risk_result["score"] == min(sum(f["points"] for f in findings), 100)
+
+
+def test_repeated_indicator_finding_is_counted_once():
+    result = calculate_risk_score(eventlog_result={
+        "anomaly_detected": True,
+        "indicators": [
+            {"type": "Log Cleared", "explanation": "first"},
+            {"type": "Log Cleared", "explanation": "second"},
+        ],
+    })
+    findings = build_findings_from_risk_result(result, "evidence.evtx")
+    assert result["score"] == 25
+    assert len(findings) == 1
+    assert result["contributing_indicators"][0]["occurrences"] == 2
+
+
+@pytest.mark.parametrize("inputs, expected_score, expected_level", [
+    ({}, 0, "LOW"),
+    ({"hidden_file_result": {"anomaly_detected": True, "explanation": "h"}}, 10, "LOW"),
+    ({"eventlog_result": _eventlog("Log Cleared", "Timeline Gap")}, 40, "MEDIUM"),
+    ({"eventlog_result": _eventlog("Log Cleared", "Audit Policy Changed"), "hidden_file_result": {"anomaly_detected": True, "explanation": "h"}}, 55, "MEDIUM"),
+])
+def test_fixed_indicator_sets_keep_baseline_values(inputs, expected_score, expected_level):
+    result = calculate_risk_score(**inputs)
+    assert (result["score"], result["risk_level"]) == (expected_score, expected_level)
+
+
+@pytest.mark.parametrize("inputs", [
+    {"eventlog_result": _eventlog("Log Cleared", "Timeline Gap")},
+    {"eventlog_result": _eventlog("Log Cleared", "Log Cleared")},
+    {"hidden_file_result": {"anomaly_detected": True, "explanation": "h"}},
+    {"yara_result": _yara_success(["AntiForensic_SDelete_Signature"])},
+    {"ntfs_result": {"anomaly_detected": True, "indicators": [{"type": "NTFS Unknown Future Type", "explanation": "unknown"}]}},
+])
+def test_returned_findings_match_router_builder(inputs):
+    result = calculate_risk_score(**inputs)
+    router_findings = build_findings_from_risk_result(result, None)
+
+    def comparable(findings):
+        return [
+            (finding["type"], finding["points"], finding["severity"], finding["confidence"])
+            for finding in findings
+        ]
+
+    assert comparable(result["findings"]) == comparable(router_findings)
+    assert len(result["findings"]) == len(router_findings)
+    assert len(result["findings"]) == len(result["contributing_indicators"])
+    if inputs.get("eventlog_result") and len(inputs["eventlog_result"]["indicators"]) == 2 and inputs["eventlog_result"]["indicators"][0].get("type") == inputs["eventlog_result"]["indicators"][1].get("type"):
+        assert result["contributing_indicators"][0]["occurrences"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 tests: risk_level_note key and level-raise for HIGH+High findings
+# ---------------------------------------------------------------------------
+
+def test_risk_level_note_key_always_present():
+    """risk_level_note must always be present in the result, even when empty."""
+    result = calculate_risk_score()
+    assert "risk_level_note" in result, "risk_level_note key must always be present"
+
+
+def test_log_cleared_alone_raises_level_to_medium():
+    """Log Cleared (25 pts, HIGH severity, High confidence) alone:
+    score 25, level MEDIUM (raised), note non-empty."""
+    result = calculate_risk_score(eventlog_result=_eventlog("Log Cleared"))
+    assert result["score"] == 25
+    assert result["risk_level"] == "MEDIUM", (
+        f"Expected MEDIUM (raised), got {result['risk_level']}"
+    )
+    assert result["risk_level_note"] != "", (
+        "risk_level_note must be non-empty when level is raised"
+    )
+
+
+def test_future_timestamp_alone_stays_low():
+    """Future Timestamp (25 pts, HIGH severity, Medium confidence) alone:
+    score 25, level stays LOW, note empty."""
+    result = calculate_risk_score(timestamp_result=_timestamp("Future Timestamp"))
+    assert result["score"] == 25
+    assert result["risk_level"] == "LOW", (
+        f"Expected LOW (not raised — confidence is Medium), got {result['risk_level']}"
+    )
+    assert result["risk_level_note"] == "", (
+        "risk_level_note must be empty when level is not raised"
+    )
+
+
+def test_high_score_stays_high_note_empty():
+    """Score >= 60 → HIGH regardless; note must be empty (level was not raised)."""
+    result = calculate_risk_score(
+        eventlog_result=_eventlog("Log Cleared", "Audit Policy Changed"),
+        ntfs_result={
+            "anomaly_detected": True,
+            "indicators": [{"type": "NTFS Timestamp Discrepancy", "explanation": "m"}],
+        },
+    )
+    assert result["score"] >= 60
+    assert result["risk_level"] == "HIGH"
+    assert result["risk_level_note"] == "", (
+        "risk_level_note must be empty when score already places level at HIGH"
+    )
+
+
+def test_truncated_ntfs_scan_is_reported_as_zero_point_gap():
+    result = calculate_risk_score(ntfs_result={
+        "scan_truncated": True,
+        "scan_note": "Scan stopped after 2 MFT records. Later records were not checked.",
+    })
+
+    gap = next(
+        indicator for indicator in result["contributing_indicators"]
+        if indicator["type"] == "NTFS Analysis (Gap — Scan Truncated)"
+    )
+    assert gap["points"] == 0
+    assert gap["explanation"] == "Scan stopped after 2 MFT records. Later records were not checked."
+

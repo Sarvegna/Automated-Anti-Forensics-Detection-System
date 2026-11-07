@@ -1,7 +1,8 @@
 import sys
 import os
 import time
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timedelta, timezone
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
@@ -9,6 +10,7 @@ if project_root not in sys.path:
 
 from core.analysis_router import run_automated_analysis
 from core.timestamp_analysis import analyze_timestamps
+from core import storage
 
 
 def set_win_file_timestamps(filepath, created_dt, modified_dt, accessed_dt):
@@ -50,14 +52,12 @@ def set_win_file_timestamps(filepath, created_dt, modified_dt, accessed_dt):
     return False
 
 
-def test_real_evidence_timestamps():
+def test_real_evidence_timestamps(tmp_path):
     print("==================================================")
     print("TESTING REAL EVIDENCE FILE TIMESTAMP EXTRACTION")
     print("==================================================")
 
-    evidence_dir = os.path.join(project_root, "evidence", "input")
-    os.makedirs(evidence_dir, exist_ok=True)
-    real_file_path = os.path.join(evidence_dir, "real_user_evidence.txt")
+    real_file_path = str(tmp_path / "real_user_evidence.txt")
 
     # Create real evidence file on disk
     with open(real_file_path, "w") as f:
@@ -102,6 +102,68 @@ def test_real_evidence_timestamps():
     print("\n==================================================")
     print("REAL EVIDENCE FILE TIMESTAMP EXTRACTION PASSED SUCCESSFULLY!")
     print("==================================================")
+
+
+def test_corrupt_storage_json_is_backed_up_and_logged(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    file_path = tmp_path / "history.json"
+    file_path.write_text("{not valid json", encoding="utf-8")
+    caplog.set_level(logging.WARNING, logger=storage.__name__)
+
+    assert storage._load_json(str(file_path)) == []
+
+    backups = list(tmp_path.glob("history.json.corrupt-*"))
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == "{not valid json"
+    assert file_path.name in caplog.text
+    assert backups[0].name in caplog.text
+
+
+def test_missing_storage_json_has_no_backup(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    file_path = tmp_path / "missing.json"
+
+    assert storage._load_json(str(file_path)) == []
+    assert list(tmp_path.glob("missing.json.corrupt-*")) == []
+
+
+def test_valid_storage_json_loads_unchanged(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    file_path = tmp_path / "valid.json"
+    content = '[{"case_id":"CASE-1","score":17}]'
+    file_path.write_text(content, encoding="utf-8")
+
+    assert storage._load_json(str(file_path)) == [{"case_id": "CASE-1", "score": 17}]
+    assert list(tmp_path.glob("valid.json.corrupt-*")) == []
+
+
+def test_audit_entry_timestamp_is_current_ist(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    monkeypatch.setattr(storage, "AUDIT_FILE", str(tmp_path / "audit.json"))
+
+    entry = storage.add_audit_log_entry("test", "CASE-1", "EVID-1", "Investigator")
+    assert entry["timestamp"].endswith(" IST")
+    parsed_timestamp = datetime.strptime(
+        entry["timestamp"], "%Y-%m-%d %H:%M:%S IST"
+    ).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+
+    assert abs((parsed_timestamp - datetime.now(timezone(timedelta(hours=5, minutes=30)))).total_seconds()) <= 3
+
+
+def test_audit_entry_timestamp_uses_fixed_ist_offset(tmp_path, monkeypatch):
+    monkeypatch.setenv("TZ", "America/Los_Angeles")
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    monkeypatch.setattr(storage, "AUDIT_FILE", str(tmp_path / "audit.json"))
+
+    entry = storage.add_audit_log_entry("test", "CASE-1", "EVID-1", "Investigator")
+    parsed_timestamp = datetime.strptime(
+        entry["timestamp"], "%Y-%m-%d %H:%M:%S IST"
+    ).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+    expected_timestamp = datetime.now(timezone.utc)
+
+    assert entry["timestamp"].endswith(" IST")
+    assert parsed_timestamp.utcoffset() == timedelta(hours=5, minutes=30)
+    assert abs((parsed_timestamp - expected_timestamp).total_seconds()) <= 3
 
 
 if __name__ == "__main__":

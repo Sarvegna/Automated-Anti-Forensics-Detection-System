@@ -17,6 +17,7 @@ from core.eventlog_analysis import (
 )
 from core.evtx_reader import read_evtx_file
 from core.risk_scoring import calculate_risk_score
+from core.findings import build_findings_from_risk_result
 
 
 class TestEventLogAnalysis(unittest.TestCase):
@@ -68,8 +69,24 @@ class TestEventLogAnalysis(unittest.TestCase):
         self.assertEqual(ind["event_id"], 1100)
         self.assertEqual(ind["record_id"], 501)
         self.assertEqual(ind["channel"], "Security")
-        self.assertEqual(ind["severity"], "HIGH")
+        self.assertEqual(ind["severity"], "LOW")
         self.assertEqual(ind["points"], 10)
+
+    def test_event_1100_severity_matches_findings_builder(self):
+        event = {
+            "event_id": 1100,
+            "record_id": 501,
+            "channel": "Security",
+            "timestamp": self.base_time,
+            "source": "EventLog",
+            "message": "The Event Log service was stopped",
+        }
+        indicator = analyze_event_log([event])["indicators"][0]
+        risk_result = calculate_risk_score(eventlog_result=analyze_event_log([event]))
+        finding = build_findings_from_risk_result(risk_result, "evidence.evtx")[0]
+
+        self.assertEqual(indicator["severity"], "LOW")
+        self.assertEqual(indicator["severity"], finding["severity"])
 
     def test_event_1102_log_cleared(self):
         events = [

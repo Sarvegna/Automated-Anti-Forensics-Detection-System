@@ -1,3 +1,5 @@
+from core.findings import build_findings_from_risk_result
+
 INDICATOR_WEIGHTS = {
     "Modified Before Created": 10,
     "Accessed Before Created": 5,
@@ -123,14 +125,12 @@ def calculate_risk_score(
       HIGH   : 60 – 100
     """
     contributing_indicators = []
-    total_score = 0
 
     # 1. Timestamp Analysis Indicators
     if timestamp_result and timestamp_result.get("anomaly_detected"):
         pts, entries = _score_indicator_group(
             timestamp_result.get("indicators", []), "(Timestamp)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 2. Event Log Analysis Indicators
@@ -138,7 +138,6 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             eventlog_result.get("indicators", []), "(Event Log)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 3. Browser Artifact Analysis Indicators
@@ -146,13 +145,11 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             browser_result.get("indicators", []), "(Browser)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
 
     # 4. Hidden File Check Indicator
     if hidden_file_result and hidden_file_result.get("anomaly_detected"):
         points = INDICATOR_WEIGHTS.get("Hidden File", 0)
-        total_score += points
         contributing_indicators.append({
             "type": "Hidden File",
             "points": points,
@@ -166,8 +163,16 @@ def calculate_risk_score(
         pts, entries = _score_indicator_group(
             ntfs_result.get("indicators", []), "(NTFS)"
         )
-        total_score += pts
         contributing_indicators.extend(entries)
+
+    if ntfs_result and ntfs_result.get("scan_truncated"):
+        contributing_indicators.append({
+            "type": "NTFS Analysis (Gap — Scan Truncated)",
+            "points": 0,
+            "base_weight": 0,
+            "occurrences": 0,
+            "explanation": ntfs_result.get("scan_note", ""),
+        })
 
     # 6. YARA Cross-Artifact Analysis
     #
@@ -217,7 +222,6 @@ def calculate_risk_score(
                     rule_name = rule_type[len("YARA Match ("):-1]
 
                 points = _yara_weight_for_rule(rule_name)
-                total_score += points
                 exp = occ_list[0].get("reason", "")
                 if len(occ_list) > 1:
                     exp = f"{exp} ({len(occ_list)} occurrences detected)"
@@ -228,6 +232,9 @@ def calculate_risk_score(
                     "occurrences": len(occ_list),
                     "explanation": exp
                 })
+
+    # Findings are assembled above; calculate the score from their points.
+    total_score = sum(indicator["points"] for indicator in contributing_indicators)
 
     # Hard bounding: 0 <= score <= 100
     bounded_score = max(0, min(total_score, MAX_SCORE))
@@ -241,8 +248,30 @@ def calculate_risk_score(
     else:
         risk_level = "LOW"
 
+    # Build findings now so we can inspect confidence for the level-raise rule.
+    findings = build_findings_from_risk_result(
+        {"contributing_indicators": contributing_indicators}, None
+    )
+
+    # Raise level to at least MEDIUM when any finding is both HIGH severity
+    # and High confidence (e.g. Log Cleared).  Does not lower an already
+    # higher level.  Adds a note key so the UI/report can explain the raise.
+    risk_level_note = ""
+    if risk_level == "LOW" and any(
+        f.get("severity") == "HIGH" and f.get("confidence") == "High"
+        for f in findings
+    ):
+        risk_level = "MEDIUM"
+        risk_level_note = (
+            "Raised to MEDIUM: a high-severity, high-confidence indicator "
+            "is present that warrants investigator attention even below the "
+            "normal score threshold."
+        )
+
     return {
         "score": bounded_score,
         "risk_level": risk_level,
-        "contributing_indicators": contributing_indicators
+        "risk_level_note": risk_level_note,
+        "contributing_indicators": contributing_indicators,
+        "findings": findings,
     }
