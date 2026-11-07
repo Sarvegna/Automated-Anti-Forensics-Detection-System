@@ -2,7 +2,7 @@ import sys
 import os
 import time
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
@@ -137,16 +137,33 @@ def test_valid_storage_json_loads_unchanged(tmp_path, monkeypatch):
     assert list(tmp_path.glob("valid.json.corrupt-*")) == []
 
 
-def test_audit_entry_timestamp_is_current_utc(tmp_path, monkeypatch):
+def test_audit_entry_timestamp_is_current_ist(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
+    monkeypatch.setattr(storage, "AUDIT_FILE", str(tmp_path / "audit.json"))
+
+    entry = storage.add_audit_log_entry("test", "CASE-1", "EVID-1", "Investigator")
+    assert entry["timestamp"].endswith(" IST")
+    parsed_timestamp = datetime.strptime(
+        entry["timestamp"], "%Y-%m-%d %H:%M:%S IST"
+    ).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+
+    assert abs((parsed_timestamp - datetime.now(timezone(timedelta(hours=5, minutes=30)))).total_seconds()) <= 3
+
+
+def test_audit_entry_timestamp_uses_fixed_ist_offset(tmp_path, monkeypatch):
+    monkeypatch.setenv("TZ", "America/Los_Angeles")
     monkeypatch.setattr(storage, "_ensure_data_dir", lambda: None)
     monkeypatch.setattr(storage, "AUDIT_FILE", str(tmp_path / "audit.json"))
 
     entry = storage.add_audit_log_entry("test", "CASE-1", "EVID-1", "Investigator")
     parsed_timestamp = datetime.strptime(
-        entry["timestamp"], "%Y-%m-%d %H:%M:%S UTC"
-    ).replace(tzinfo=timezone.utc)
+        entry["timestamp"], "%Y-%m-%d %H:%M:%S IST"
+    ).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+    expected_timestamp = datetime.now(timezone.utc)
 
-    assert abs((parsed_timestamp - datetime.now(timezone.utc)).total_seconds()) <= 3
+    assert entry["timestamp"].endswith(" IST")
+    assert parsed_timestamp.utcoffset() == timedelta(hours=5, minutes=30)
+    assert abs((parsed_timestamp - expected_timestamp).total_seconds()) <= 3
 
 
 if __name__ == "__main__":

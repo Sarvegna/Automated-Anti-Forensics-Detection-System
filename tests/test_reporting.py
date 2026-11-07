@@ -27,6 +27,8 @@ def test_reports_include_finding_confidence():
     html_report = generate_html_report(pipeline_result)
 
     assert '"confidence": "Medium"' in json_report
+    assert "<h1>Automated Anti-Forensics Analysis Report</h1>" in html_report
+    assert "Automated indicators that require investigator review. Not a validated forensic conclusion." in html_report
     assert "<th>CONFIDENCE</th>" in html_report
     assert "<td style=\"padding:10px; border-bottom:1px solid #2a2e3a;\">Medium</td>" in html_report
 

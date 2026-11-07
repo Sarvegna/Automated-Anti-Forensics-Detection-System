@@ -172,4 +172,4 @@ Sarvegna, B.Tech, Kalasalingam Academy of Research and Education
 
 ## License
 
-Add a license before publishing (for example MIT) and place it in a `LICENSE` file.
+MIT License. See the LICENSE file.

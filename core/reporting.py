@@ -148,7 +148,8 @@ def generate_html_report(pipeline_result, case_info=None, output_path=None):
 <body>
     <div class="container">
         <div class="header">
-            <h1>Automated Anti-Forensics Detection System</h1>
+            <h1>Automated Anti-Forensics Analysis Report</h1>
+            <div class="subtitle">Automated indicators that require investigator review. Not a validated forensic conclusion.</div>
             <div class="subtitle">OFFICIAL FORENSIC EXAMINATION REPORT · GENERATED {gen_time}</div>
         </div>
 

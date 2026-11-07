@@ -52,6 +52,15 @@ def test_timestamp_display_known_types_resolve_correctly():
         assert pts == expected, f"Timestamp type '{ind_type}' expected {expected} pts, got {pts}"
 
 
+def test_timestamp_finding_badge_class_matches_severity():
+    streamlit_source = open(
+        os.path.join(project_root, "app", "streamlit_app.py"),
+        encoding="utf-8",
+    ).read()
+    assert 'sev_badge = "badge-high" if sev == "HIGH" else ("badge-medium" if sev == "MEDIUM" else "badge-low")' in streamlit_source
+    assert 'class="badge {sev_badge}"' in streamlit_source
+
+
 # ---------------------------------------------------------------------------
 # Fix 2: Event Log display fallback
 # ---------------------------------------------------------------------------

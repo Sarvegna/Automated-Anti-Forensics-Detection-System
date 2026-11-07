@@ -20,7 +20,7 @@ def analyze_event_log(events):
       - Event ID 1102: Security audit log cleared (25 pts, HIGH)
       - Event ID 104: System log cleared (25 pts, HIGH)
       - Event ID 4719: Audit policy changed (20 pts, HIGH)
-      - Event ID 1100: Windows Event Log service shut down (10 pts, HIGH)
+      - Event ID 1100: Windows Event Log service shut down (10 pts, LOW)
       - Timeline Gaps > 30 minutes (15 pts, MEDIUM)
 
     Other Security events (e.g., 4624, 4672, 4798, 4907, 5379, 5799)

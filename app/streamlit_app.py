@@ -1060,6 +1060,8 @@ if selected_page == "Investigation":
         source_label = "Forensic Image" if source_type_val == "forensic_image" else "Individual Evidence File"
         input_method_val = result.get("evidence_context", {}).get("input_method") or result.get("input_method", "browser_upload")
         input_method_label = "Local Evidence Path" if input_method_val in ("local_path", "Local Evidence Path") else "Browser Upload"
+        evidence_path_label = "Evidence File Path" if input_method_label == "Local Evidence Path" else "Uploaded file name"
+        evidence_path_value = result.get("file_path") if input_method_label == "Local Evidence Path" else meta.get("filename", result.get("evidence_reference"))
         ts_prov_val = result.get("evidence_context", {}).get("timestamp_provenance") or result.get("timestamp_result", {}).get("timestamp_provenance", {}).get("category", "local_filesystem")
 
         st.markdown(f"""
@@ -1084,8 +1086,8 @@ if selected_page == "Investigation":
                     <td style="color:#38bdf8; font-weight:600;">{ident.get('evidence_type', 'Unknown')}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight:600; color:#cbd5e1;">Evidence File Path:</td>
-                    <td colspan="3" class="tech-mono" style="color:#ffffff; word-break:break-all;">{result.get('file_path')}</td>
+                    <td style="font-weight:600; color:#cbd5e1;">{evidence_path_label}:</td>
+                    <td colspan="3" class="tech-mono" style="color:#ffffff; word-break:break-all;">{evidence_path_value}</td>
                 </tr>
                 <tr>
                     <td style="font-weight:600; color:#cbd5e1;">SHA-256:</td>
@@ -1445,6 +1447,7 @@ elif selected_page == "Module Results":
                         ind_exp = ind.get("explanation", "N/A")
                         pts = INDICATOR_WEIGHTS.get(ind_type, 0)
                         sev = severity_from_points(pts)
+                        sev_badge = "badge-high" if sev == "HIGH" else ("badge-medium" if sev == "MEDIUM" else "badge-low")
 
                         st.markdown(f"""
                         <div class="dark-panel" style="border-left: 4px solid #ef4444; margin-top: 15px; margin-bottom: 15px;">
@@ -1455,7 +1458,7 @@ elif selected_page == "Module Results":
                             <div style="display: flex; gap: 24px; align-items: center;">
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">SEVERITY:</span>
-                                    <span class="badge badge-high" style="margin-left: 6px;">{sev}</span>
+                                    <span class="badge {sev_badge}" style="margin-left: 6px;">{sev}</span>
                                 </div>
                                 <div>
                                     <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">POINTS:</span>
@@ -1539,10 +1542,10 @@ elif selected_page == "Module Results":
 
                 gaps = b_info.get("gap_indicators", [])
                 if gaps:
-                    st.warning(f"⚠️ Detected {len(gaps)} potential anti-forensic activity gap(s) in browser database.")
+                    st.warning("Long gap in recorded activity. This can be ordinary inactivity. Requires investigator review.")
                     for g in gaps:
                         g_type = g.get("type", "Timeline Gap")
-                        g_exp = g.get("explanation", "Potential anti-forensic activity gap detected.")
+                        g_exp = g.get("explanation", "Long gap in recorded activity. This can be ordinary inactivity. Requires investigator review.")
                         st.markdown(f"""
                         <div class="dark-panel" style="border-left: 4px solid #eab308; margin-top: 15px; margin-bottom: 15px;">
                             <div style="font-size: 13px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">FINDING</div>
@@ -1886,7 +1889,7 @@ elif selected_page == "Audit Log":
         audit_table = f"""<table class="forensic-table audit-log-table">
 <thead>
 <tr>
-<th>Timestamp (UTC)</th>
+<th>Timestamp (UTC / IST)</th>
 <th>Action</th>
 <th>Case ID</th>
 <th>Evidence ID</th>

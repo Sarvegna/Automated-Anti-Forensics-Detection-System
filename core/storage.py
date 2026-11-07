@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # Resolve base project directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -138,7 +138,8 @@ def add_audit_log_entry(action, case_id, evidence_id, investigator, details=""):
     Appends an audit log entry with timestamp and details.
     """
     logs = _load_json(AUDIT_FILE)
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ist = timezone(timedelta(hours=5, minutes=30))
+    timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S IST")
 
     entry = {
         "timestamp": timestamp,
