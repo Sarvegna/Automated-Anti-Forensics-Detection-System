@@ -1,6 +1,8 @@
 import os
 import json
-from datetime import datetime
+import logging
+import shutil
+from datetime import datetime, timezone
 
 # Resolve base project directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -8,6 +10,7 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 HISTORY_FILE = os.path.join(DATA_DIR, "investigation_history.json")
 AUDIT_FILE = os.path.join(DATA_DIR, "audit_log.json")
+logger = logging.getLogger(__name__)
 
 
 def _ensure_data_dir():
@@ -25,6 +28,31 @@ def _load_json(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+        backup_base = f"{os.fspath(file_path)}.corrupt-{timestamp}"
+        backup_path = backup_base
+        suffix = 1
+        while True:
+            try:
+                with open(file_path, "rb") as source:
+                    with open(backup_path, "xb") as backup:
+                        shutil.copyfileobj(source, backup)
+                break
+            except FileExistsError:
+                backup_path = f"{backup_base}-{suffix}"
+                suffix += 1
+            except Exception as backup_error:
+                logger.warning(
+                    "Could not read JSON file %s or back it up: %s",
+                    file_path,
+                    backup_error,
+                )
+                return []
+        logger.warning(
+            "Could not parse JSON file %s; saved corrupt backup as %s",
+            file_path,
+            backup_path,
+        )
         return []
 
 
@@ -110,7 +138,7 @@ def add_audit_log_entry(action, case_id, evidence_id, investigator, details=""):
     Appends an audit log entry with timestamp and details.
     """
     logs = _load_json(AUDIT_FILE)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     entry = {
         "timestamp": timestamp,
