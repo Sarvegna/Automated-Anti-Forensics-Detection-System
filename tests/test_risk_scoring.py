@@ -497,3 +497,55 @@ def test_returned_findings_match_router_builder(inputs):
     if inputs.get("eventlog_result") and len(inputs["eventlog_result"]["indicators"]) == 2 and inputs["eventlog_result"]["indicators"][0].get("type") == inputs["eventlog_result"]["indicators"][1].get("type"):
         assert result["contributing_indicators"][0]["occurrences"] == 2
 
+
+# ---------------------------------------------------------------------------
+# Fix 1 tests: risk_level_note key and level-raise for HIGH+High findings
+# ---------------------------------------------------------------------------
+
+def test_risk_level_note_key_always_present():
+    """risk_level_note must always be present in the result, even when empty."""
+    result = calculate_risk_score()
+    assert "risk_level_note" in result, "risk_level_note key must always be present"
+
+
+def test_log_cleared_alone_raises_level_to_medium():
+    """Log Cleared (25 pts, HIGH severity, High confidence) alone:
+    score 25, level MEDIUM (raised), note non-empty."""
+    result = calculate_risk_score(eventlog_result=_eventlog("Log Cleared"))
+    assert result["score"] == 25
+    assert result["risk_level"] == "MEDIUM", (
+        f"Expected MEDIUM (raised), got {result['risk_level']}"
+    )
+    assert result["risk_level_note"] != "", (
+        "risk_level_note must be non-empty when level is raised"
+    )
+
+
+def test_future_timestamp_alone_stays_low():
+    """Future Timestamp (25 pts, HIGH severity, Medium confidence) alone:
+    score 25, level stays LOW, note empty."""
+    result = calculate_risk_score(timestamp_result=_timestamp("Future Timestamp"))
+    assert result["score"] == 25
+    assert result["risk_level"] == "LOW", (
+        f"Expected LOW (not raised — confidence is Medium), got {result['risk_level']}"
+    )
+    assert result["risk_level_note"] == "", (
+        "risk_level_note must be empty when level is not raised"
+    )
+
+
+def test_high_score_stays_high_note_empty():
+    """Score >= 60 → HIGH regardless; note must be empty (level was not raised)."""
+    result = calculate_risk_score(
+        eventlog_result=_eventlog("Log Cleared", "Audit Policy Changed"),
+        ntfs_result={
+            "anomaly_detected": True,
+            "indicators": [{"type": "NTFS Timestamp Discrepancy", "explanation": "m"}],
+        },
+    )
+    assert result["score"] >= 60
+    assert result["risk_level"] == "HIGH"
+    assert result["risk_level_note"] == "", (
+        "risk_level_note must be empty when score already places level at HIGH"
+    )
+

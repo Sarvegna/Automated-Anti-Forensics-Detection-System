@@ -239,11 +239,30 @@ def calculate_risk_score(
     else:
         risk_level = "LOW"
 
+    # Build findings now so we can inspect confidence for the level-raise rule.
+    findings = build_findings_from_risk_result(
+        {"contributing_indicators": contributing_indicators}, None
+    )
+
+    # Raise level to at least MEDIUM when any finding is both HIGH severity
+    # and High confidence (e.g. Log Cleared).  Does not lower an already
+    # higher level.  Adds a note key so the UI/report can explain the raise.
+    risk_level_note = ""
+    if risk_level == "LOW" and any(
+        f.get("severity") == "HIGH" and f.get("confidence") == "High"
+        for f in findings
+    ):
+        risk_level = "MEDIUM"
+        risk_level_note = (
+            "Raised to MEDIUM: a high-severity, high-confidence indicator "
+            "is present that warrants investigator attention even below the "
+            "normal score threshold."
+        )
+
     return {
         "score": bounded_score,
         "risk_level": risk_level,
+        "risk_level_note": risk_level_note,
         "contributing_indicators": contributing_indicators,
-        "findings": build_findings_from_risk_result(
-            {"contributing_indicators": contributing_indicators}, None
-        )
+        "findings": findings,
     }
