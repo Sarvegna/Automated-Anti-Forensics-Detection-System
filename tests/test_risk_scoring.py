@@ -549,3 +549,17 @@ def test_high_score_stays_high_note_empty():
         "risk_level_note must be empty when score already places level at HIGH"
     )
 
+
+def test_truncated_ntfs_scan_is_reported_as_zero_point_gap():
+    result = calculate_risk_score(ntfs_result={
+        "scan_truncated": True,
+        "scan_note": "Scan stopped after 2 MFT records. Later records were not checked.",
+    })
+
+    gap = next(
+        indicator for indicator in result["contributing_indicators"]
+        if indicator["type"] == "NTFS Analysis (Gap — Scan Truncated)"
+    )
+    assert gap["points"] == 0
+    assert gap["explanation"] == "Scan stopped after 2 MFT records. Later records were not checked."
+

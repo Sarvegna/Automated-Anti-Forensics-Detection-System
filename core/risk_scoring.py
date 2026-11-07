@@ -165,6 +165,15 @@ def calculate_risk_score(
         )
         contributing_indicators.extend(entries)
 
+    if ntfs_result and ntfs_result.get("scan_truncated"):
+        contributing_indicators.append({
+            "type": "NTFS Analysis (Gap — Scan Truncated)",
+            "points": 0,
+            "base_weight": 0,
+            "occurrences": 0,
+            "explanation": ntfs_result.get("scan_note", ""),
+        })
+
     # 6. YARA Cross-Artifact Analysis
     #
     # Only SUCCESS results with actual findings contribute to the score.

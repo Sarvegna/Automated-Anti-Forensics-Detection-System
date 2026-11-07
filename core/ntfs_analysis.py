@@ -210,6 +210,7 @@ def enumerate_ntfs_files(image_path: str, max_records: int = 2000) -> Dict[str, 
     mft_record_size = vol_info["mft_record_size"]
 
     records_by_num = {}
+    scan_truncated = False
     try:
         with open(image_path, "rb") as f:
             f.seek(mft_offset)
@@ -220,6 +221,10 @@ def enumerate_ntfs_files(image_path: str, max_records: int = 2000) -> Dict[str, 
                 entry = parse_mft_entry(data, record_idx)
                 if entry and entry["is_in_use"]:
                     records_by_num[record_idx] = entry
+            else:
+                scan_truncated = (
+                    os.fstat(f.fileno()).st_size >= f.tell() + mft_record_size
+                )
 
         # Build directory map: record_num -> directory name
         dir_names = {5: ""} # Root directory (MFT #5)
@@ -263,6 +268,11 @@ def enumerate_ntfs_files(image_path: str, max_records: int = 2000) -> Dict[str, 
             "volume_info": vol_info,
             "files": files,
             "records_scanned": len(records_by_num),
+            "scan_truncated": scan_truncated,
+            "scan_note": (
+                f"Scan stopped after {max_records} MFT records. Later records were not checked."
+                if scan_truncated else ""
+            ),
         }
     except Exception as e:
         return {"status": "FAILED", "reason": f"Error enumerating MFT: {str(e)}"}
@@ -365,6 +375,8 @@ def analyze_ntfs_image(evidence_input: Any, evidence_reference: Optional[str] = 
         "evidence_type": "NTFS Forensic Image",
         "volume_info": enum_result["volume_info"],
         "records_scanned": enum_result["records_scanned"],
+        "scan_truncated": enum_result["scan_truncated"],
+        "scan_note": enum_result["scan_note"],
         "files": files,
         "discrepancies": discrepancies,
         "indicators": indicators,

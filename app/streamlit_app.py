@@ -12,6 +12,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from core.analysis_router import run_automated_analysis
+from core.browser_upload import run_browser_upload_analysis
 from core.reporting import generate_json_report, generate_html_report
 from core.risk_scoring import INDICATOR_WEIGHTS
 from core.findings import severity_from_points
@@ -847,11 +848,19 @@ if selected_page == "Investigation":
                                 details=f"Uploaded {uploaded_file.name} ({len(file_bytes)} bytes) via Browser Upload"
                             )
 
-                            pipeline_result = run_automated_analysis(
-                                temp_path,
-                                evidence_reference=uploaded_file.name,
-                                source_metadata=source_metadata
-                            )
+                            try:
+                                pipeline_result = run_browser_upload_analysis(
+                                    run_automated_analysis,
+                                    st.session_state.case_id,
+                                    st.session_state.evidence_id,
+                                    st.session_state.investigator_name,
+                                    temp_path,
+                                    evidence_reference=uploaded_file.name,
+                                    source_metadata=source_metadata
+                                )
+                            except Exception as error:
+                                st.error(f"Analysis Failed: {type(error).__name__}: {error}")
+                                st.stop()
 
                             analysis_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
 
@@ -1706,6 +1715,8 @@ elif selected_page == "Module Results":
             elif m_data:
                 discrepancies = m_data.get("discrepancies", [])
                 records_scanned = m_data.get("records_scanned", 0)
+                if m_data.get("scan_truncated"):
+                    st.warning(m_data.get("scan_note", ""))
                 col_n1, col_n2 = st.columns(2)
                 with col_n1:
                     st.metric("MFT Records Scanned", records_scanned)
